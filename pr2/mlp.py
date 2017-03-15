@@ -169,18 +169,20 @@ class MLP(object):
         # your code here
         delta_k1 = None #delta de la capa siguiente. ¿Hace falta declararlo en python para poder ejecutar la ultima instruccion del for?
 
-        for k in range(1, self.nb_layers+1).reverse():  # r, ..., 1
+        ks = range(1, self.nb_layers+1)
+        ks.reverse()
+        for k in ks:  # r, ..., 1
 
             #Calculamos los nuevos deltas
-            if (k<nb.layers):
+            if (k<self.nb_layers):
                 w = self.weights_list[k]  # pesos de la capa k + 1
                 dh = self.diff_activation_functions[k-1]  # derivada de la funcion de activacion de la capa k
                 a = self.activations[k]  # activaciones de la capa k
-                delta_k = (delta_k1.dot(w.T))*dh(a) # (*) multiplica el vector dh(a) elemnto a elemento con cada fila de (...)
+                delta_k = (delta_k1.dot(w.T))*dh(a)
             else:
                 delta_k = self.y - t #podemos asumir que la derivada de En respecto de la ultima capa de activaciones es y-t
 
-            grad_wk = get_w_gradients(units[k-1], delta_k) + beta*self.weights_list[k-1]
+            grad_wk = MLP.get_w_gradients(self.units[k-1], delta_k) + beta*self.weights_list[k-1]
             grad_w_list[k-1] = grad_wk
 
             grad_bk = np.sum(delta_k, axis=0)/N + beta*self.biases_list[k-1]
@@ -196,7 +198,8 @@ class MLP(object):
     @staticmethod
     # z matriz (N,D), delta matriz (N,D')
     # intentar usar funciones de numpy como einsum para hacerlo mas corto y eficiente
-    # hay que devolver la suma promediada de las N matrices (k-esima fila de z transpuesta)*(k-esima fila de delta), con k de 1 a N
+    # hay que devolver la suma promediada de las N matrices (DxD') resultantes de multiplicar matricialmente
+    # (k-esima fila de z, transpuesta)*(k-esima fila de delta), para cada k de 1 a N
     def get_w_gradients(z, delta):
         N = z.shape[0]
         sum_grads = np.zeros((z.shape[1], delta.shape[1]))
@@ -231,9 +234,12 @@ class MLP(object):
                 indexes = index_list[batch:batch+batch_size]
                 self.get_gradients(x_data[indexes], t_data[indexes], beta)
                 self.weights_list = [self.weights_list[k] - epsilon*self.grad_w_list[k] for k in range(self.nb_layers)]
-                # self.get_activations_and_units(x_batch)
+                
 
             if print_cost:
+                x_batch = x_data
+                t_batch = t_data
+                self.get_activations_and_units(x_batch)
                 if self.activation_functions[-1] == MLP.sigmoid:
                     sys.stdout.write('cost = %f\r' %MLP.binary_cross_entropy(self.y, t_batch)[0])
                     sys.stdout.flush()
