@@ -77,11 +77,11 @@ class MLP(object):
 
     @staticmethod
     def relu(z):
-        return np.maximum(z, [0] * z.shape[0])
+        return np.maximum(z, 0)
 
     @staticmethod
     def drelu(z):
-        z[z >= 0] = 1
+        z[z >= 0] = 1   # drelu(0)=1 por convenio
         z[z < 0] = 0
         return z
 
@@ -90,7 +90,7 @@ class MLP(object):
         return z
 
     @staticmethod
-    def didentity(z):
+    def didentity(z): # Solo funciona para numpy arrays
         return [1] * z.shape[0]
 
     @staticmethod
@@ -102,15 +102,15 @@ class MLP(object):
     @staticmethod
     def binary_cross_entropy(y, t_data):
         return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y),
-                       axis=0)
+                       axis=0) #no hace falta axis=0? Solo se va a llamar para datos individuales?
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
-        return -np.sum(t_data * np.log(y))
+        return -np.sum(t_data * np.log(y), axis=0)
 
     @staticmethod
     def cost_L2(y, t_data):
-        return 0.5 * (np.linalg.norm(y - t_data, 2)**2)
+        return 0.5*np.sum((y - t_data)**2)
 
     # %% simple weights initialization
 
@@ -132,6 +132,7 @@ class MLP(object):
         self.biases_list = biases_list
 
     # %% feed forward pass
+    # x matrixz(N,D0)
     def get_activations_and_units(self, x):
 
         activations = [x]
@@ -149,6 +150,7 @@ class MLP(object):
         self.y = z  # hemos modificado codigo del template (antes la z era una y)
 
     # %% backpropagation 
+    # x matriz(N,D0)
     def get_gradients(self, x, t, beta=0):
 
         # Ligeramente distinto a las notas de clase debido a la separacion de las bs y los ws
@@ -169,13 +171,17 @@ class MLP(object):
 
         for k in range(1, self.nb_layers+1).reverse():  # r-1, ..., 1
 
-            grad_wk = (self.units[k-1].T).dot(delta_k)  # Comprobar que se comporta como se espera (producto matricial)
+            grad_wk = (self.units[k-1].T).dot(delta_k) + beta*self.W[k-1] # Comprobar que se comporta como se espera (producto matricial)
             grad_w_list[k-1] = grad_wk
 
             grad_bk = delta_k
             grad_b_list[k-1] = grad_bk
 
             delta_k = self.get_next_delta(k-1, delta_k)
+            
+            # sumar y promediar
+            
+            # tener en cuenta el beta (cosas de regularizacion)
 
         ##
 
