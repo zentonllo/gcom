@@ -256,8 +256,8 @@ if __name__ == '__main__':
 
     # %% Create data
     # np.random.seed(5)
-    nb_black = 15
-    nb_red = 15
+    nb_black = 50
+    nb_red = 50
     nb_data = nb_black + nb_red
     x_data_black = np.random.randn(nb_black, 2) + np.array([0, 0])
     x_data_red = np.random.randn(nb_red, 2) + np.array([10, 10])
@@ -277,8 +277,8 @@ if __name__ == '__main__':
 
 # %%
     mlp = MLP(K_list, activation_functions, diff_activation_functions)
-
+    
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=100, batch_size=5, epsilon=0.1, print_cost=True)
+              epochs=1000, batch_size=10, initialize_weights=True, epsilon=0.1, print_cost=True)
