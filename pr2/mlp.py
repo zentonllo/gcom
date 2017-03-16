@@ -231,9 +231,10 @@ class MLP(object):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
                 # your code here
-                indexes = index_list[batch:batch+batch_size]
+                indexes = index_list[batch*batch_size:(batch+1)*batch_size]
                 self.get_gradients(x_data[indexes], t_data[indexes], beta)
                 self.weights_list = [self.weights_list[k] - epsilon*self.grad_w_list[k] for k in range(self.nb_layers)]
+                self.biases_list = [self.biases_list[k] - epsilon*self.grad_b_list[k] for k in range(self.nb_layers)]
                 
 
             if print_cost:
