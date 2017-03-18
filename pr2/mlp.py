@@ -242,13 +242,13 @@ class MLP(object):
                 t_batch = t_data
                 self.get_activations_and_units(x_batch)
                 if self.activation_functions[-1] == MLP.sigmoid:
-                    sys.stdout.write('cost = %f\r' %MLP.binary_cross_entropy(self.y, t_batch)[0])
+                    sys.stdout.write('cost = %f\r' %MLP.binary_cross_entropy(self.y, t_batch))
                     sys.stdout.flush()
                 elif self.activation_functions[-1] == MLP.softmax:
-                    sys.stdout.write('cost = %f\r' %MLP.softmax_cross_entropy(self.y, t_batch)[0])
+                    sys.stdout.write('cost = %f\r' %MLP.softmax_cross_entropy(self.y, t_batch))
                     sys.stdout.flush()
                 else:
-                    sys.stdout.write('cost = %f\r' %MLP.cost_L2(self.y, t_batch)[0])
+                    sys.stdout.write('cost = %f\r' %MLP.cost_L2(self.y, t_batch))
                     sys.stdout.flush()
 
 # %% let's experiment
