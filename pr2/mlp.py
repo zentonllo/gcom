@@ -206,6 +206,7 @@ class MLP(object):
 
         for k in range(N):
             grad = np.zeros((z.shape[1], delta.shape[1]))
+            # Yo haría grad = z[k].T.dot(delta[k]), sum_grads =sum_grads + grad y nos ahorramos el for interno
             for i in range(z.shape[1]):
                 grad[i] = z[k,i]*delta[k]
             sum_grads = sum_grads + grad
