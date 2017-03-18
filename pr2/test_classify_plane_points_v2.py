@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from MLP_v2 import MLP
+from mlp import MLP
 
 # create data
 
