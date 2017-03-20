@@ -197,7 +197,7 @@ class MLP(object):
 
         for k in range(N):
             grad = np.zeros((z.shape[1], delta.shape[1]))
-            grad = z[k].T.dot(delta[k])
+            grad = np.outer(z[k], delta[k])
             sum_grads = sum_grads + grad
 
         return sum_grads/N
