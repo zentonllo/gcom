@@ -43,15 +43,19 @@ K = 1  # final dimension
 #  You can use at most 3000 weights and 2000 epochs.
 #  For example:
 
-K_list = [D, 10, 10, K]  # list of dimensions of layers
+K_list = [D, 10, 10, 10, 10, K]  # list of dimensions of layers
 
-activation_functions = [MLP.sigmoid,
-                        MLP.sigmoid,
-                        MLP.sigmoid]
+activation_functions = [np.tanh,
+                        np.tanh,
+                        np.tanh,
+                        np.tanh,
+                        np.tanh]
 
-diff_activation_functions = [MLP.dsigmoid,
-                             MLP.dsigmoid,
-                             MLP.dsigmoid]
+diff_activation_functions = [MLP.dtanh,
+                             MLP.dtanh,
+                             MLP.dtanh,
+                             MLP.dtanh,
+                             MLP.dtanh]
 
 # network training
 
@@ -63,6 +67,7 @@ mlp = MLP(K_list,
 mlp.train(x_data, t_data,
           epochs=1000, batch_size=10,
           epsilon=0.1,
+          beta = 0.001,
           print_cost=True)
 
 time_end = time.time()
