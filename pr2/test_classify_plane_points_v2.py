@@ -51,11 +51,9 @@ activation_functions = [np.tanh,
                         np.tanh,
                         np.tanh,
                         np.tanh,
-                        np.tanh,
                         np.tanh]
 
 diff_activation_functions = [MLP.dtanh,
-                             MLP.dtanh,
                              MLP.dtanh,
                              MLP.dtanh,
                              MLP.dtanh,
