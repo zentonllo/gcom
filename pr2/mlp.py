@@ -16,14 +16,13 @@ class MLP(object):
     # subindex will be used to name these layers, with 0 being the input layer
     # Dk = number of neurons on layer k
 
-    # The weights' matrix W for each layer will have dimension (Dk, Dk+1) (Wij es el peso i-esimo de la
+    # The weights' matrix W for each layer will have dimension (Dk, Dk+1)
     # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is forced because of the template, so:
+    # to operate with a units vector on the matrix, you have to multiply by the left
+    # and so both the activations and the units will be row vectors.
 
-        # to operate with a units vector on the matrix, you have to multiply by the left, y entonces
-        # and so both the activations and the units will be row vectors.
-
-        # the matrix that group vectors with N different data (like the matrix x or y)
-        # will have a row for each data, so they'll have dimension (N,?).
+    # The matrix that group vectors with N different data (like the matrix x or y)
+    # will have a row for each data, so they'll have dimension (N,?).
 
     # The lists of weights' and biases' matrix have the k-th layer data in the (k-1)-th index.
     # It's important to keep this phase shift in mind
@@ -48,7 +47,7 @@ class MLP(object):
         self.biases_list = None  # list of R row vectors of Dk+1 elements
 
         self.grad_w_list = None  # list of R (Dk,Dk+1) matrix 
-        self.grad_b_list = None  # list of R raw vectors of Dk+1 elements
+        self.grad_b_list = None  # list of R row vectors of Dk+1 elements
 
         self.activations = None  # list of R+1 (N,Dk) matrix
         self.units = None  # list of R+1 (N,Dk) matrix
@@ -133,7 +132,7 @@ class MLP(object):
         units = [x]
         z = x
         for i in range(self.nb_layers):
-            # matrix + raw vector, so it adds the vector to each of the matrix' raws
+            # matrix + row vector, so it adds the vector to each of the matrix rows
             a = z.dot(self.weights_list[i]) + self.biases_list[i] 
             activations.append(a)
             z = self.activation_functions[i](a)
@@ -159,8 +158,8 @@ class MLP(object):
         grad_w_list = [0]*self.nb_layers
         grad_b_list = [0]*self.nb_layers
 
-        delta_k1 = None # delta value for the next layer. ¿Hace falta declararlo en python para poder ejecutar la ultima instruccion del for?
-
+        delta_k1 = None # delta value for the next layer
+        
         ks = range(1, self.nb_layers+1)
         ks.reverse()
         for k in ks:  # r, ..., 1
@@ -168,11 +167,11 @@ class MLP(object):
             # we calculate the new delta values
             if (k<self.nb_layers):
                 w = self.weights_list[k]  # weights of the (k+1)-th layer
-                dh = self.diff_activation_functions[k-1]  # derived from the activation function on layer k
+                dh = self.diff_activation_functions[k-1]  # activation function derivative on layer k
                 a = self.activations[k]  # activations from layer k
                 delta_k = (delta_k1.dot(w.T))*dh(a)
             else:
-                delta_k = self.y - t # we can assume the derived from En with respect to the last activations layer is y-t
+                delta_k = self.y - t # we can assume the derivative of En respect to the last activations layer is y-t
 
             grad_wk = MLP.get_w_gradients(self.units[k-1], delta_k) + beta*self.weights_list[k-1]
             grad_w_list[k-1] = grad_wk
