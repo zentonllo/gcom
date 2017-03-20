@@ -20,10 +20,10 @@ class MLP(object):
     # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is forced because of the template, so:
 
         # to operate with a units vector on the matrix, you have to multiply by the left, y entonces
-        # and so both the activations and the units will be raw vectors.
+        # and so both the activations and the units will be row vectors.
 
         # the matrix that group vectors with N different data (like the matrix x or y)
-        # will have a raw for each data, so they'll have dimension (N,?).
+        # will have a row for each data, so they'll have dimension (N,?).
 
     # The lists of weights' and biases' matrix have the k-th layer data in the (k-1)-th index.
     # It's important to keep this phase shift in mind
@@ -45,7 +45,7 @@ class MLP(object):
         self.init_seed = init_seed
 
         self.weights_list = None  # list of R (Dk,Dk+1) matrix
-        self.biases_list = None  # list of R raw vectors of Dk+1 elements
+        self.biases_list = None  # list of R row vectors of Dk+1 elements
 
         self.grad_w_list = None  # list of R (Dk,Dk+1) matrix 
         self.grad_b_list = None  # list of R raw vectors of Dk+1 elements
