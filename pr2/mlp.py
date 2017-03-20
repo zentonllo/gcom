@@ -1,38 +1,32 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Mar  4 13:13:13 2017
-
-@author: avaldes
-"""
 
 from __future__ import division, print_function
-
 
 import sys
 import numpy as np
 
+__author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
+
 
 class MLP(object):
 
-    # Algunos comentarios sobre notacion y estructura de los vectores y matrices
-    # N = numero de datos
-    # R = numero de capas sin contar la capa imput(que no tiene pesos ni funciones de activacion)
-    # se usaran subindices para denotar estas capas, siendo 0 el subindice de la capa input
-    # Dk = numero de neuronas en la capa k
+    # Here are some appreciations about notation and the structure of vectors and matrix
+    # N = data number
+    # R = layers number (without the imput layer, as it has no activation functions nor weights
+    # subindex will be used to name these layers, with 0 being the input layer
+    # Dk = number of neurons on layer k
 
-    # La matriz W de pesos de cada capa tendra dimension (Dk, Dk+1) (Wij es el peso i-esimo de la
-    # neurona j-esima de la capa k+1. Esta decision viene forzada por el
-    # template, e implica que:
+    # The weights' matrix W for each layer will have dimension (Dk, Dk+1) (Wij es el peso i-esimo de la
+    # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is forced because of the template, so:
 
-        # para operar un vector de units sobre ella hay que multiplicarlo por la izquierda, y entonces
-        # tanto las activaciones como las units seran vectores fila.
+        # to operate with a units vector on the matrix, you have to multiply by the left, y entonces
+        # and so both the activations and the units will be raw vectors.
 
-        # Las matrices que agrupen vectores de N datos diferentes (como la matriz x o la y) tendran
-        # una fila para cada dato, es decir, tendran dimension (N,?)
+        # the matrix that group vectors with N different data (like the matrix x or y)
+        # will have a raw for each data, so they'll have dimension (N,?).
 
-    # Las listas de matrices de pesos y biases tienen los correspondientes a la capa k-esima en el
-    # indice k-1. Hay que tener cuidado con este desfase
+    # The lists of weights' and biases' matrix have the k-th layer data in the (k-1)-th index.
+    # It's important to keep this phase shift in mind
 
     # self.nb_layers = R
 
@@ -43,22 +37,22 @@ class MLP(object):
         self.K_list = K_list
         self.nb_layers = len(K_list) - 1  # = R
 
-        # Suponemos que son listas de longitud R, y al indice k
+        # We suppose they're lists of R elements
         self.activation_functions = activation_functions
-        # le corresponde la capa k+1
+        # and that the k-th index represents the (k+1)-th layer
         self.diff_activation_functions = diff_activation_functions
 
         self.init_seed = init_seed
 
-        self.weights_list = None  # lista de R matrices (Dk,Dk+1)
-        self.biases_list = None  # lista de R vectores fila de dimension Dk+1
+        self.weights_list = None  # list of R (Dk,Dk+1) matrix
+        self.biases_list = None  # list of R raw vectors of Dk+1 elements
 
-        self.grad_w_list = None  # lista de R matrices (Dk,Dk+1)
-        self.grad_b_list = None  # lista de R vectores fila de dimenison Dk+1
+        self.grad_w_list = None  # list of R (Dk,Dk+1) matrix 
+        self.grad_b_list = None  # list of R raw vectors of Dk+1 elements
 
-        self.activations = None  # lista de R+1 matrices (N,Dk)
-        self.units = None  # lista de R+1 matrices (N, Dk)
-        self.y = None  # matriz (N, Dr)
+        self.activations = None  # list of R+1 (N,Dk) matrix
+        self.units = None  # list of R+1 (N,Dk) matrix
+        self.y = None  # (N,Dr) matrix
 
         self.init_weights()
 
@@ -81,7 +75,7 @@ class MLP(object):
 
     @staticmethod
     def drelu(z):
-        z[z >= 0] = 1   # drelu(0)=1 por convenio
+        z[z >= 0] = 1   # drelu(0)=1 by agreement
         z[z < 0] = 0
         return z
 
@@ -90,7 +84,7 @@ class MLP(object):
         return z
 
     @staticmethod
-    def didentity(z): # Solo funciona para numpy arrays
+    def didentity(z): # it only works with numpy arrays
         return [1] * z.shape[0]
 
     @staticmethod
@@ -102,7 +96,7 @@ class MLP(object):
     @staticmethod
     def binary_cross_entropy(y, t_data):
         return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y),
-                       axis=0) #no hace falta axis=0? Solo se va a llamar para datos individuales?
+                       axis=0) 
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
@@ -132,15 +126,15 @@ class MLP(object):
         self.biases_list = biases_list
 
     # %% feed forward pass
-    # x matrixz(N,D0)
+    # x = (N,D0) matrix
     def get_activations_and_units(self, x):
 
         activations = [x]
         units = [x]
         z = x
         for i in range(self.nb_layers):
-            # your code here
-            a = z.dot(self.weights_list[i]) + self.biases_list[i] #matriz + vector fila, pero funciona (suma el vector a cada fila de la matriz)
+            # matrix + raw vector, so it adds the vector to each of the matrix' raws
+            a = z.dot(self.weights_list[i]) + self.biases_list[i] 
             activations.append(a)
             z = self.activation_functions[i](a)
             units.append(z)
@@ -150,15 +144,14 @@ class MLP(object):
         self.y = z
 
     # %% backpropagation 
-    # Calcula el gradiente del error para cada dato y promedia.
-    # Todos los gradientes se calculan a la vez usando matrices (N,?) en vec de vectores. Para ello usamos:
-    # x matriz(N,D0), t matriz(N,Dr), delta_k matriz(N,Dk)
+    # This function calculates the error gradient for each of the data and averages them.
+    # All the gradients are calculated at the same time using (N,?) matrix instead of vectors. 
+    # We use : x = (N,D0) matrix, t = (N,Dr) matrix, delta_k = (N,Dk) matrix
     def get_gradients(self, x, t, beta=0):
 
-        # Ligeramente distinto a las notas de clase debido a la separacion de las bs y los ws
-        # y al cambio de indices para denotar los pesos
-
-        # Debe devolver una lista con los indices desfasados como weights_list (indice k = gradientes de la capa k+1, la capa 0 (input) no tiene Ws)
+        # Slightly different from the class notes due to the separation of bs and Ws
+        # and the change of the index to name the weights.
+        # The functions returns a list of shifted index (k-th index = (k+1)-th layer gradients; the layer 0 (input) has no Ws)
 
         self.get_activations_and_units(x)
 
@@ -166,21 +159,20 @@ class MLP(object):
         grad_w_list = [0]*self.nb_layers
         grad_b_list = [0]*self.nb_layers
 
-        # your code here
-        delta_k1 = None #delta de la capa siguiente. ¿Hace falta declararlo en python para poder ejecutar la ultima instruccion del for?
+        delta_k1 = None # delta value for the next layer. ¿Hace falta declararlo en python para poder ejecutar la ultima instruccion del for?
 
         ks = range(1, self.nb_layers+1)
         ks.reverse()
         for k in ks:  # r, ..., 1
 
-            #Calculamos los nuevos deltas
+            # we calculate the new delta values
             if (k<self.nb_layers):
-                w = self.weights_list[k]  # pesos de la capa k + 1
-                dh = self.diff_activation_functions[k-1]  # derivada de la funcion de activacion de la capa k
-                a = self.activations[k]  # activaciones de la capa k
+                w = self.weights_list[k]  # weights of the (k+1)-th layer
+                dh = self.diff_activation_functions[k-1]  # derived from the activation function on layer k
+                a = self.activations[k]  # activations from layer k
                 delta_k = (delta_k1.dot(w.T))*dh(a)
             else:
-                delta_k = self.y - t #podemos asumir que la derivada de En respecto de la ultima capa de activaciones es y-t
+                delta_k = self.y - t # we can assume the derived from En with respect to the last activations layer is y-t
 
             grad_wk = MLP.get_w_gradients(self.units[k-1], delta_k) + beta*self.weights_list[k-1]
             grad_w_list[k-1] = grad_wk
@@ -196,24 +188,22 @@ class MLP(object):
         self.grad_b_list = grad_b_list
 
     @staticmethod
-    # z matriz (N,D), delta matriz (N,D')
-    # intentar usar funciones de numpy como einsum para hacerlo mas corto y eficiente
-    # hay que devolver la suma promediada de las N matrices (DxD') resultantes de multiplicar matricialmente
-    # (k-esima fila de z, transpuesta)*(k-esima fila de delta), para cada k de 1 a N
+    # z = (N,D) matrix, delta = (N,D') matrix
+    # the function returns the average sum of the N (D,D') matrix result of multiplying
+    # (k-th raw from z, transposed)*(k-th raw from delta), for each k from 1 to N
     def get_w_gradients(z, delta):
         N = z.shape[0]
         sum_grads = np.zeros((z.shape[1], delta.shape[1]))
 
         for k in range(N):
             grad = np.zeros((z.shape[1], delta.shape[1]))
-            # Yo haría grad = z[k].T.dot(delta[k]), sum_grads =sum_grads + grad y nos ahorramos el for interno
-            for i in range(z.shape[1]):
-                grad[i] = z[k,i]*delta[k]
+            grad = z[k].T.dot(delta[k])
             sum_grads = sum_grads + grad
 
         return sum_grads/N
 
     # %% 
+    # training method for the neuron
     def train(self, x_data, t_data,
               epochs, batch_size,
               initialize_weights=False,
@@ -231,7 +221,6 @@ class MLP(object):
         for _ in range(epochs):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
-                # your code here
                 indexes = index_list[batch*batch_size:(batch+1)*batch_size]
                 self.get_gradients(x_data[indexes], t_data[indexes], beta)
                 self.weights_list = [self.weights_list[k] - epsilon*self.grad_w_list[k] for k in range(self.nb_layers)]
