@@ -49,11 +49,8 @@ class Perceptron(object):
         onesColumn = np.array([[1]*n]).T
         x = np.hstack((onesColumn, x))
         outputs = self.get_nn_value(x)
-        for i in range(n):
-            if (outputs[i] <= 0.5):
-                outputs[i] = 0
-            else:
-                outputs[i] = 1
+        outputs[outputs <= 0.5] = 0
+        outputs[outputs > 0.5] = 1
 
         return outputs
 
