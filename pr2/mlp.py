@@ -96,12 +96,11 @@ class MLP(object):
     # %% cost functions
     @staticmethod
     def binary_cross_entropy(y, t_data):
-        return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y),
-                       axis=0)
+        return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y))
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
-        return -np.sum(t_data * np.log(y), axis=0)
+        return -np.sum(t_data * np.log(y))
 
     @staticmethod
     def cost_L2(y, t_data):
