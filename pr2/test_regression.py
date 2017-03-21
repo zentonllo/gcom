@@ -13,6 +13,8 @@ import time
 
 from mlp import MLP
 
+
+__author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 #  create data
 
 
@@ -40,15 +42,20 @@ K = 1  # final dimension
 #  You can use at most 1000 weights and 1000 epochs.
 #  For example:
 
-K_list = [D, 20, 20, K]  # list of dimensions of layers
+K_list = [D, 20, 20, 10, 10, K]  # list of dimensions of layers
 
 activation_functions = [MLP.sigmoid,
+                        MLP.sigmoid,
+                        MLP.sigmoid,
                         MLP.sigmoid,
                         MLP.identity]
 
 diff_activation_functions = [MLP.dsigmoid,
                              MLP.dsigmoid,
+                             MLP.dsigmoid,
+                             MLP.dsigmoid,
                              MLP.didentity]
+
 
 # network training
 
@@ -73,5 +80,3 @@ for t_data in [t_data1, t_data2]:
     plt.plot(x_data, mlp.y)
     plt.plot(x_data, t_data, color='black')
     plt.show()
-
-

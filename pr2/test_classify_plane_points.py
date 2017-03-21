@@ -15,6 +15,8 @@ import time
 
 from mlp import MLP
 
+__author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
+
 # create data
 
 nb_black = 50

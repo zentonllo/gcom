@@ -14,6 +14,8 @@ import time
 
 from mlp import MLP
 
+__author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
+
 # create data
 
 nb_black = 100
@@ -64,11 +66,23 @@ diff_activation_functions = [MLP.dtanh,
 # network training
 
 # List of different learning (epsilons) and regularization (betas) rates
-# used in this benchmark
-learning_rates = np.linspace(0.1, 0.5, 10)
-regularization_rates = np.linspace(0.05, 0.1, 10)
+# used in this benchmark (to test some values just change the lower and upper
+# values and the number of values evenly spaced between these bounds
+
+lower_epsilon = 0.1
+upper_epsilon = 0.1
+n_epsilons = 1
+
+lower_beta = 0.001
+upper_beta = 0.001
+n_betas = 1
+
+
+learning_rates = np.linspace(lower_epsilon, upper_epsilon, n_epsilons)
+regularization_rates = np.linspace(lower_beta, upper_beta, n_betas)
 
 # We will only accept results under this threshold
+# (that is, total number of misclassified points)
 min_wrongs = 200
 
 # Iterate over the different rates
@@ -99,7 +113,7 @@ for epsilon_test in learning_rates:
         miss_red = np.sum(wrong_red)
         miss_black = np.sum(wrong_black)
         missclassified = miss_red + miss_black
-        
+
         #  Prepare plots and save current best parameters
         if (missclassified < min_wrongs):
             min_wrongs = missclassified
@@ -144,13 +158,7 @@ for epsilon_test in learning_rates:
                         marker='o', color='black')
 
 
-# We execute the best train performed in order to find out its cost
-mlp = MLP(K_list, activation_functions, diff_activation_functions)
-mlp.train(x_data, t_data,
-          epochs=2000, batch_size=10,
-          epsilon=best_epsilon,
-          beta=best_beta,
-          print_cost=True)
+# Print the optimal parameters
 print('Time used in training %f' % time_best_train)
 print('Optimal epsilon parameter: %f' % best_epsilon)
 print('Optimal beta (regularization) parameter: %f' % best_beta)
