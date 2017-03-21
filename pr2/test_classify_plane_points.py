@@ -48,16 +48,14 @@ K = 1  # final dimension
 #  You can use at most 1000 weights and 1000 epochs.
 #  For example:
 
-K_list = [D, 10, 10, 10, 5, K]  # list of dimensions of layers
+K_list = [D, 20, 10, 15, K]  # list of dimensions of layers
 
 activation_functions = [MLP.sigmoid,
-                        MLP.sigmoid,
                         MLP.sigmoid,
                         MLP.sigmoid,
                         MLP.sigmoid]
 
 diff_activation_functions = [MLP.dsigmoid,
-                             MLP.dsigmoid,
                              MLP.dsigmoid,
                              MLP.dsigmoid,
                              MLP.dsigmoid]
