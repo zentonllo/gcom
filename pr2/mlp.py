@@ -10,22 +10,25 @@ __author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
 class MLP(object):
 
-    # Here are some appreciations about notation and the structure of vectors and matrix
+    # Here are some appreciations about notation and the structure of vectors
+    # and matrix:
     # N = data number
-    # R = layers number (without the imput layer, as it has no activation functions nor weights
-    # subindex will be used to name these layers, with 0 being the input layer
+    # R = layers number (without the imput layer, as it has no activation
+    #     functions nor weights subindex will be used to name these layers,
+    #     with 0 being the input layer.
     # Dk = number of neurons on layer k
 
     # The weights' matrix W for each layer will have dimension (Dk, Dk+1)
-    # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is forced because of the template, so:
-    # to operate with a units vector on the matrix, you have to multiply by the left
-    # and so both the activations and the units will be row vectors.
+    # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is
+    # forced because of the template, so:
+    # to operate with a units vector on the matrix, you have to multiply by the
+    # left and so both the activations and the units will be row vectors.
 
-    # The matrix that group vectors with N different data (like the matrix x or y)
-    # will have a row for each data, so they'll have dimension (N,?).
+    # The matrix that group vectors with N different data (like the matrix x or
+    # y) will have a row for each data, so they'll have dimension (N,?).
 
-    # The lists of weights' and biases' matrix have the k-th layer data in the (k-1)-th index.
-    # It's important to keep this phase shift in mind
+    # The lists of weights' and biases' matrix have the k-th layer data in the
+    # (k-1)-th index. It's important to keep this phase shift in mind
 
     # self.nb_layers = R
 
@@ -45,8 +48,7 @@ class MLP(object):
 
         self.weights_list = None  # list of R (Dk,Dk+1) matrix
         self.biases_list = None  # list of R row vectors of Dk+1 elements
-
-        self.grad_w_list = None  # list of R (Dk,Dk+1) matrix 
+        self.grad_w_list = None  # list of R (Dk,Dk+1) matrix
         self.grad_b_list = None  # list of R row vectors of Dk+1 elements
 
         self.activations = None  # list of R+1 (N,Dk) matrix
@@ -83,7 +85,7 @@ class MLP(object):
         return z
 
     @staticmethod
-    def didentity(z): # it only works with numpy arrays
+    def didentity(z):  # it only works with numpy arrays
         return [1] * z.shape[0]
 
     @staticmethod
@@ -95,7 +97,7 @@ class MLP(object):
     @staticmethod
     def binary_cross_entropy(y, t_data):
         return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y),
-                       axis=0) 
+                       axis=0)
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
@@ -132,8 +134,9 @@ class MLP(object):
         units = [x]
         z = x
         for i in range(self.nb_layers):
-            # matrix + row vector, so it adds the vector to each of the matrix rows
-            a = z.dot(self.weights_list[i]) + self.biases_list[i] 
+            # matrix + row vector, so it adds the vector to each of the matrix
+            # rows
+            a = z.dot(self.weights_list[i]) + self.biases_list[i]
             activations.append(a)
             z = self.activation_functions[i](a)
             units.append(z)
@@ -142,15 +145,17 @@ class MLP(object):
         self.units = units
         self.y = z
 
-    # %% backpropagation 
-    # This function calculates the error gradient for each of the data and averages them.
-    # All the gradients are calculated at the same time using (N,?) matrix instead of vectors. 
+    # %% backpropagation
+    # This function calculates the error gradient for each of the data and
+    # averages them. All the gradients are calculated at the same time using
+    # (N,?) matrix instead of vectors.
     # We use : x = (N,D0) matrix, t = (N,Dr) matrix, delta_k = (N,Dk) matrix
     def get_gradients(self, x, t, beta=0):
 
-        # Slightly different from the class notes due to the separation of bs and Ws
-        # and the change of the index to name the weights.
-        # The functions returns a list of shifted index (k-th index = (k+1)-th layer gradients; the layer 0 (input) has no Ws)
+        # Slightly different from the class notes due to the separation of bs
+        # and Ws and the change of the index to name the weights.
+        # The functions returns a list of shifted index (k-th index = (k+1)-th
+        # layer gradients; the layer 0 (input) has no Ws)
 
         self.get_activations_and_units(x)
 
@@ -158,22 +163,28 @@ class MLP(object):
         grad_w_list = [0]*self.nb_layers
         grad_b_list = [0]*self.nb_layers
 
-        delta_k1 = None # delta value for the next layer
-        
+        delta_k1 = None  # delta value for the next layer
+
         ks = range(1, self.nb_layers+1)
         ks.reverse()
         for k in ks:  # r, ..., 1
 
             # we calculate the new delta values
-            if (k<self.nb_layers):
-                w = self.weights_list[k]  # weights of the (k+1)-th layer
-                dh = self.diff_activation_functions[k-1]  # activation function derivative on layer k
-                a = self.activations[k]  # activations from layer k
+            if (k < self.nb_layers):
+                # weights of the (k+1)-th layer
+                w = self.weights_list[k]
+                # activation function derivative on layer k
+                dh = self.diff_activation_functions[k-1]
+                # activations from layer k
+                a = self.activations[k]
                 delta_k = (delta_k1.dot(w.T))*dh(a)
             else:
-                delta_k = self.y - t # we can assume the derivative of En respect to the last activations layer is y-t
+                # we can assume the derivative of En respect to the last
+                # activations layer is y-t
+                delta_k = self.y - t
 
-            grad_wk = MLP.get_w_gradients(self.units[k-1], delta_k) + beta*self.weights_list[k-1]
+            grad_wk = (MLP.get_w_gradients(self.units[k-1], delta_k) +
+                       beta * self.weights_list[k-1])
             grad_w_list[k-1] = grad_wk
 
             grad_bk = np.sum(delta_k, axis=0)/N + beta*self.biases_list[k-1]
@@ -188,8 +199,9 @@ class MLP(object):
 
     @staticmethod
     # z = (N,D) matrix, delta = (N,D') matrix
-    # the function returns the average sum of the N (D,D') matrix result of multiplying
-    # (k-th raw from z, transposed)*(k-th raw from delta), for each k from 1 to N
+    # This function returns the average sum of the N (D,D') matrix result of
+    # multiplying (k-th row from z, transposed)*(k-th row from delta)
+    # for each k from 1 to N
     def get_w_gradients(z, delta):
         N = z.shape[0]
         sum_grads = np.zeros((z.shape[1], delta.shape[1]))
@@ -201,7 +213,7 @@ class MLP(object):
 
         return sum_grads/N
 
-    # %% 
+    # %%
     # training method for the neuron
     def train(self, x_data, t_data,
               epochs, batch_size,
@@ -209,7 +221,7 @@ class MLP(object):
               epsilon=0.01,
               beta=0,
               print_cost=False):
-  
+
         if initialize_weights:
             self.init_weights()
 
@@ -222,22 +234,29 @@ class MLP(object):
             for batch in range(nb_batches):
                 indexes = index_list[batch*batch_size:(batch+1)*batch_size]
                 self.get_gradients(x_data[indexes], t_data[indexes], beta)
-                self.weights_list = [self.weights_list[k] - epsilon*self.grad_w_list[k] for k in range(self.nb_layers)]
-                self.biases_list = [self.biases_list[k] - epsilon*self.grad_b_list[k] for k in range(self.nb_layers)]
-                
+                self.weights_list = [(self.weights_list[k] -
+                                     epsilon*self.grad_w_list[k])
+                                     for k in range(self.nb_layers)]
+                self.biases_list = [(self.biases_list[k] -
+                                    epsilon*self.grad_b_list[k])
+                                    for k in range(self.nb_layers)]
 
             if print_cost:
                 x_batch = x_data
                 t_batch = t_data
                 self.get_activations_and_units(x_batch)
                 if self.activation_functions[-1] == MLP.sigmoid:
-                    sys.stdout.write('cost = %f\r' %MLP.binary_cross_entropy(self.y, t_batch))
+                    sys.stdout.write('cost = %f\r' %
+                                     MLP.binary_cross_entropy(self.y, t_batch))
                     sys.stdout.flush()
                 elif self.activation_functions[-1] == MLP.softmax:
-                    sys.stdout.write('cost = %f\r' %MLP.softmax_cross_entropy(self.y, t_batch))
+                    sys.stdout.write('cost = %f\r' %
+                                     MLP.softmax_cross_entropy(
+                                         self.y, t_batch))
                     sys.stdout.flush()
                 else:
-                    sys.stdout.write('cost = %f\r' %MLP.cost_L2(self.y, t_batch))
+                    sys.stdout.write('cost = %f\r' %
+                                     MLP.cost_L2(self.y, t_batch))
                     sys.stdout.flush()
 
 # %% let's experiment
@@ -267,8 +286,9 @@ if __name__ == '__main__':
 
 # %%
     mlp = MLP(K_list, activation_functions, diff_activation_functions)
-    
+
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=10, initialize_weights=True, epsilon=0.1, print_cost=True)
+              epochs=1000, batch_size=10, initialize_weights=True, epsilon=0.1,
+              print_cost=True)
