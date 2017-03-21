@@ -206,7 +206,6 @@ class MLP(object):
         sum_grads = np.zeros((z.shape[1], delta.shape[1]))
 
         for k in range(N):
-            grad = np.zeros((z.shape[1], delta.shape[1]))
             grad = np.outer(z[k], delta[k])
             sum_grads = sum_grads + grad
 
