@@ -182,8 +182,8 @@ class MLP(object):
                 # activations layer is y-t
                 delta_k = self.y - t
 
-            grad_wk = (MLP.get_w_gradients(self.units[k-1], delta_k) +
-                       beta * self.weights_list[k-1])
+            
+            grad_wk = (np.einsum('ij,ik', self.units[k-1], delta_k)/N) + (beta * self.weights_list[k-1])
             grad_w_list[k-1] = grad_wk
 
             grad_bk = np.sum(delta_k, axis=0)/N + beta*self.biases_list[k-1]
@@ -195,21 +195,6 @@ class MLP(object):
 
         self.grad_w_list = grad_w_list
         self.grad_b_list = grad_b_list
-
-    @staticmethod
-    # z = (N,D) matrix, delta = (N,D') matrix
-    # This function returns the average sum of the N (D,D') matrix result of
-    # multiplying (k-th row from z, transposed)*(k-th row from delta)
-    # for each k from 1 to N
-    def get_w_gradients(z, delta):
-        N = z.shape[0]
-        sum_grads = np.zeros((z.shape[1], delta.shape[1]))
-
-        for k in range(N):
-            grad = np.outer(z[k], delta[k])
-            sum_grads = sum_grads + grad
-
-        return sum_grads/N
 
     # %%
     # training method for the neuron
