@@ -26,7 +26,7 @@ train_images, train_labels = train_data
 D = train_images.shape[1]
 K = 10
 
-K_list = [D, 20, 20, K]
+K_list = [D, 30, 20, K]
 activation_functions = [MLP.sigmoid, MLP.sigmoid, MLP.identity]
 diff_activation_functions  = [MLP.dsigmoid,MLP.dsigmoid,MLP.didentity]
 x_data = np.asarray(train_images) 
@@ -36,7 +36,7 @@ t_data = digits_to_vec(train_labels)
 mlp = MLP(K_list,activation_functions, diff_activation_functions)
 
 mlp.train(x_data, t_data,
-          epochs=100, batch_size=10,
+          epochs=1000, batch_size=10,
           epsilon=0.1,
           beta=0.001,
           print_cost=False)
