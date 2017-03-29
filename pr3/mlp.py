@@ -53,11 +53,7 @@ class MLP(object):
 
         self.activations = None  # list of R+1 (N,Dk) matrix
         self.units = None  # list of R+1 (N,Dk) matrix
-        self.y = None  # (N,Dr) matrix
-        
-        # TODO 
-        self.dict_method = {'SGD':sgd, 'Momentum':momentum, 'Nesterov':nesterov}
-        self.dict_param = {'SGD':[], 'Momentum':[], 'Nesterov':{'v_b':[0]*self.nb_layers, 'v_w':[0]*self.nb_layers }}        
+        self.y = None  # (N,Dr) matrix    
         
         self.init_weights()
 
@@ -212,6 +208,8 @@ class MLP(object):
               gamma=0.9,
               print_cost=False):
         
+                
+        sgd_args = {}
         def sgd(): 
             self.get_gradients(x_data[indexes], t_data[indexes], beta)
             self.weights_list = [(self.weights_list[k] -
@@ -220,27 +218,44 @@ class MLP(object):
             self.biases_list = [(self.biases_list[k] -
                                     epsilon*self.grad_b_list[k])
                                     for k in range(self.nb_layers)]
-            
-        def momentum():
-            
         
-        def nesterov():
-            # TODO
-            aux_w = [gamma*self.dict_param['Nesterov'][k] for k in range(self.nb_layers)]
-            aux_b = 
-            self.weights_list = [self.weights_list[k] - aux[k]
+        momentum_args = {"v_w":[0]*self.nb_layers, "v_b":[0]*self.nb_layers}
+        def momentum(v_w, v_b):
+
+            self.get_gradients(x_data[indexes], t_data[indexes], beta)
+            for k in range(self.nb_layers):
+                v_w[k] = gamma * v_w[k] + epsilon*self.grad_w_list[k]
+                v_b[k] = gamma * v_b[k] + epsilon*self.grad_b_list[k]
+
+                self.weights_list[k] = (self.weights_list[k] -
+                                    	        epsilon*self.grad_w_list[k])
+                self.biases_list[k] = (self.biases_list[k] -
+                                	               epsilon*self.grad_b_list[k])
+            
+        nesterov_args = {"v_w":[0]*self.nb_layers, "v_b":[0]*self.nb_layers}
+        def nesterov(v_w, v_b):
+
+            w_aux, b_aux = self.weights_list, self.biases_list
+
+            self.weights_list = [self.weights_list[k] - gamma*v_w[k]
                                      for k in range(self.nb_layers)]
-            self.biases_list = [self.biases_list[k] - aux
-                                    for k in range(self.nb_layers)]
-            self.get_gradients(x_data[indexes], t_data[indexes], beta)            
-            self.dict_param['Nesterov'] = [gamma*self.dict_param['Nesterov'][k] + epsilon*self.weights_list[k] for k in range(self.nb_layers)]
-            
-        def adagrad():
-            
-        
-        def adam():
-        
-        
+            self.biases_list = [self.biases_list[k] - gamma*v_b[k]
+                                    for k in range(self.nb_layers)]            
+
+            self.get_gradients(x_data[indexes], t_data[indexes], beta)
+
+            for k in range(self.nb_layers):
+
+                v_w[k] = gamma * v_w[k] + epsilon*self.grad_w_list[k]
+                v_b[k] = gamma * v_b[k] + epsilon*self.grad_b_list[k]
+
+                self.weights_list[k] = w_aux[k] - epsilon*v_w[k]
+                self.biases_list[k] = b_aux[k] - epsilon*v_b[k]
+
+
+        dict_method = {"SGD":sgd, "momentum":momentum, "nesterov":nesterov}
+
+        dict_args = {"SGD":sgd_args, "momentum":momentum_args, "nesterov":nesterov_args}
         
         
         if initialize_weights:
@@ -254,7 +269,7 @@ class MLP(object):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
                 indexes = index_list[batch*batch_size:(batch+1)*batch_size]
-                dict_method[method]()
+                dict_method[method](**(dict_args[method]))
             
             if print_cost:
                 x_batch = x_data
