@@ -227,10 +227,8 @@ class MLP(object):
                 v_w[k] = gamma * v_w[k] + epsilon*self.grad_w_list[k]
                 v_b[k] = gamma * v_b[k] + epsilon*self.grad_b_list[k]
 
-                self.weights_list[k] = (self.weights_list[k] -
-                                    	        epsilon*self.grad_w_list[k])
-                self.biases_list[k] = (self.biases_list[k] -
-                                	               epsilon*self.grad_b_list[k])
+                self.weights_list[k] = (self.weights_list[k] - v_w[k])
+                self.biases_list[k] = (self.biases_list[k] - v_b[k])
             
         nesterov_args = {"v_w":[0]*self.nb_layers, "v_b":[0]*self.nb_layers}
         def nesterov(v_w, v_b):

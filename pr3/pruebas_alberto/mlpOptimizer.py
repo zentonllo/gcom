@@ -56,10 +56,8 @@ class Optimizer(object):
             v_w[k] = self.gamma * v_w[k] + self.epsilon*self.mpercep.grad_w_list[k]
             v_b[k] = self.gamma * v_b[k] + self.epsilon*self.mpercep.grad_b_list[k]
 
-            self.mpercep.weights_list[k] = (self.mpercep.weights_list[k] -
-                                	        self.epsilon*self.mpercep.grad_w_list[k])
-            self.mpercep.biases_list[k] = (self.mpercep.biases_list[k] -
-                            	               self.epsilon*self.mpercep.grad_b_list[k])
+            self.mpercep.weights_list[k] = (self.mpercep.weights_list[k] - v_w[k])
+            self.mpercep.biases_list[k] = (self.mpercep.biases_list[k] - v_b[k])
         ### Cambio a v_w = [self.gamma * v_w[k] + self.epsilon*self.mpercep.grad_w_list[k] for k in range(self.mpercep.nb_layers)]??
     
     def nesterov(self, x_data,t_data,indexes, v_w, v_b):
