@@ -224,7 +224,7 @@ class MLP(object):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
                 indexes = index_list[batch*batch_size:(batch+1)*batch_size]
-                opt.run(x_data,t_data,indexes)
+                opt.run(x_data[indexes],t_data[indexes])
                 
             if print_cost:
                 x_batch = x_data
