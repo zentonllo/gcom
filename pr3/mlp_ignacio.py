@@ -266,5 +266,5 @@ if __name__ == '__main__':
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=10, initialize_weights=False, method='Adagrad', epsilon=0.1,
+              epochs=1000, batch_size=10, initialize_weights=False, method='Adadelta', epsilon=0.01,
               print_cost=True)
