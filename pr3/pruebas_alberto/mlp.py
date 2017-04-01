@@ -54,8 +54,8 @@ class MLP(object):
 
         self.activations = None  # list of R+1 (N,Dk) matrix
         self.units = None  # list of R+1 (N,Dk) matrix
-        self.y = None  # (N,Dr) matrix    
-        
+        self.y = None  # (N,Dr) matrix
+
         self.init_weights()
 
 # %% definition of activation functions and derivatives
@@ -105,7 +105,7 @@ class MLP(object):
 
     @staticmethod
     def cost_L2(y, t_data):
-        return 0.5*np.sum((y - t_data)**2)
+        return 0.5 * np.sum((y - t_data)**2)
 
     # %% simple weights initialization
 
@@ -125,7 +125,6 @@ class MLP(object):
 
         self.weights_list = weights_list
         self.biases_list = biases_list
-        
 
     # %% feed forward pass
     # x = (N,D0) matrix
@@ -161,12 +160,12 @@ class MLP(object):
         self.get_activations_and_units(x)
 
         N = x.shape[0]
-        grad_w_list = [0]*self.nb_layers
-        grad_b_list = [0]*self.nb_layers
+        grad_w_list = [0] * self.nb_layers
+        grad_b_list = [0] * self.nb_layers
 
         delta_k1 = None  # delta value for the next layer
 
-        ks = range(1, self.nb_layers+1)
+        ks = range(1, self.nb_layers + 1)
         ks.reverse()
         for k in ks:  # r, ..., 1
 
@@ -175,21 +174,21 @@ class MLP(object):
                 # weights of the (k+1)-th layer
                 w = self.weights_list[k]
                 # activation function derivative on layer k
-                dh = self.diff_activation_functions[k-1]
+                dh = self.diff_activation_functions[k - 1]
                 # activations from layer k
                 a = self.activations[k]
-                delta_k = (delta_k1.dot(w.T))*dh(a)
+                delta_k = (delta_k1.dot(w.T)) * dh(a)
             else:
                 # we can assume the derivative of En respect to the last
                 # activations layer is y-t
                 delta_k = self.y - t
 
-            
-            grad_wk = (np.einsum('ij,ik', self.units[k-1], delta_k)/N) + (beta * self.weights_list[k-1])
-            grad_w_list[k-1] = grad_wk
+            grad_wk = (np.einsum(
+                'ij,ik', self.units[k - 1], delta_k) / N) + (beta * self.weights_list[k - 1])
+            grad_w_list[k - 1] = grad_wk
 
-            grad_bk = np.sum(delta_k, axis=0)/N
-            grad_b_list[k-1] = grad_bk
+            grad_bk = np.sum(delta_k, axis=0) / N
+            grad_b_list[k - 1] = grad_bk
 
             delta_k1 = delta_k
 
@@ -202,17 +201,15 @@ class MLP(object):
     # training method for the neuron
     def train(self, x_data, t_data,
               epochs, batch_size,
-              initialize_weights=False, 
+              initialize_weights=False,
               method='SGD',
               epsilon=0.01,
               beta=0,
               gamma=0.9,
               print_cost=False):
-        
-                
-        opt = mlpo.Optimizer(self,method,epsilon,beta,gamma)
-        
-        
+
+        opt = mlpo.Optimizer(self, method, epsilon, beta, gamma)
+
         if initialize_weights:
             self.init_weights()
 
@@ -223,9 +220,10 @@ class MLP(object):
         for _ in range(epochs):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
-                indexes = index_list[batch*batch_size:(batch+1)*batch_size]
-                opt.run(x_data[indexes],t_data[indexes])
-                
+                indexes = index_list[batch *
+                                     batch_size:(batch + 1) * batch_size]
+                opt.run(x_data[indexes], t_data[indexes])
+
             if print_cost:
                 x_batch = x_data
                 t_batch = t_data
@@ -246,6 +244,7 @@ class MLP(object):
 
 # %% let's experiment
 
+
 if __name__ == '__main__':
 
     # %% Create data
@@ -257,7 +256,7 @@ if __name__ == '__main__':
     x_data_red = np.random.randn(nb_red, 2) + np.array([10, 10])
 
     x_data = np.vstack((x_data_black, x_data_red))
-    t_data = np.asarray([0]*nb_black + [1]*nb_red).reshape(nb_data, 1)
+    t_data = np.asarray([0] * nb_black + [1] * nb_red).reshape(nb_data, 1)
 
 # %% Net structure
     D = x_data.shape[1]  # initial dimension
