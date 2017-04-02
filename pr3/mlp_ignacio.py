@@ -110,7 +110,7 @@ class MLP(object):
     def init_weights(self):
 
         if self.init_seed:
-            np.random.seed(self.seed)
+            np.random.seed(self.init_seed)
 
         weights_list = []
         biases_list = []
@@ -266,5 +266,6 @@ if __name__ == '__main__':
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=10, initialize_weights=False, method='Adadelta', epsilon=0.01,
+              epochs=1000, batch_size=20, initialize_weights=False, method='adam', eta=0.1, 
+              beta = 0, gamma = 0.9, beta_1=0.9, beta_2=0.999, epsilon=1e-8,
               print_cost=True)
