@@ -44,19 +44,6 @@ class SGD(Optimizer):
 
 
 class Momentum(Optimizer):
-
-    
-    def init_aux_structures(self,mlp):
-        self.v_w_list = []
-        self.v_b_list = []
-
-        for layer in range(mlp.nb_layers):
-            new_v_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_v_b = np.zeros(mlp.K_list[layer + 1])
-            self.v_w_list.append(new_v_w)
-            self.v_b_list.append(new_v_b)
-
-        
     
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
@@ -65,7 +52,8 @@ class Momentum(Optimizer):
         self.gamma = kwargs.pop("gamma", 0.9)
         self.beta = kwargs.pop("beta", 0)
         
-        self.init_aux_structures(mlp)
+        self.v_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.v_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
@@ -84,19 +72,7 @@ class Momentum(Optimizer):
 
 
 class Nesterov(Optimizer):
-    
-    def init_aux_structures(self,mlp):
-        self.v_w_list = []
-        self.v_b_list = []
 
-        for layer in range(mlp.nb_layers):
-            new_v_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_v_b = np.zeros(mlp.K_list[layer + 1])
-            self.v_w_list.append(new_v_w)
-            self.v_b_list.append(new_v_b)
-    
-    
-    
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
 
@@ -104,7 +80,8 @@ class Nesterov(Optimizer):
         self.gamma = kwargs.pop("gamma", 0.9)
         self.beta = kwargs.pop("beta", 0)
         
-        self.init_aux_structures(mlp) 
+        self.v_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.v_b_list = [np.zeros(b.shape) for b in mlp.biases_list] 
 
     def process_batch(self, x_data, t_data):
 
@@ -132,17 +109,6 @@ class Nesterov(Optimizer):
 
 class Adagrad(Optimizer):
 
-    def init_aux_structures(self,mlp):
-        self.G_w_list = []
-        self.G_b_list = []
-
-        for layer in range(mlp.nb_layers):
-            new_G_w = np.ones((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_G_b = np.ones(mlp.K_list[layer + 1])
-            self.G_w_list.append(new_G_w)
-            self.G_b_list.append(new_G_b)
-    
-    
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
 
@@ -150,7 +116,8 @@ class Adagrad(Optimizer):
         self.beta = kwargs.pop("beta", 0)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         
-        self.init_aux_structures(mlp) 
+        self.G_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.G_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
@@ -235,19 +202,7 @@ class Adadelta(Optimizer):
                                  zip(self.avg_b_list, delta_biases_list)]
 
 class RMSprop(Optimizer):
-    
-    def init_aux_structures(self,mlp):
-        self.avg_w_list = []
-        self.avg_b_list = []
-        
 
-        for layer in range(mlp.nb_layers):
-            new_avg_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_avg_b = np.zeros(mlp.K_list[layer + 1])
-            self.avg_w_list.append(new_avg_w)
-            self.avg_b_list.append(new_avg_b)
-    
-    
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
 
@@ -256,10 +211,8 @@ class RMSprop(Optimizer):
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
         
-        self.init_aux_structures(mlp) 
-
-    
-    
+        self.avg_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.avg_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
     
     def process_batch(self, x_data, t_data):
 
@@ -285,25 +238,7 @@ class RMSprop(Optimizer):
         
        
 class Adam(Optimizer):
-    
-    def init_aux_structures(self,mlp):
-        self.v_w_list = []
-        self.v_b_list = []
-        
-        self.m_w_list = []
-        self.m_b_list = []
 
-        for layer in range(mlp.nb_layers):
-            new_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_b = np.zeros(mlp.K_list[layer + 1])
-            self.v_w_list.append(new_w)
-            self.v_b_list.append(new_b)
-            self.m_w_list.append(new_w)
-            self.m_b_list.append(new_b)
-            
-
-    
-    
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
 
@@ -313,10 +248,11 @@ class Adam(Optimizer):
         self.beta_1 = kwargs.pop("beta_1", 0.9)
         self.beta_2 = kwargs.pop("beta_2", 0.999)
         
-        self.init_aux_structures(mlp) 
+        self.v_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.v_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
+        self.m_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
+        self.m_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
-    
-    
     
     def process_batch(self, x_data, t_data):
 
