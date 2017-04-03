@@ -4,6 +4,7 @@ from __future__ import division, print_function
 
 import sys
 import numpy as np
+import mlpOptimizer as mlpo
 
 __author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
@@ -48,19 +49,22 @@ class MLP(object):
 
         self.weights_list = None  # list of R (Dk,Dk+1) matrix
         self.biases_list = None  # list of R row vectors of Dk+1 elements
-        self.grad_w_list = None  # list of R (Dk,Dk+1) matrix
-        self.grad_b_list = None  # list of R row vectors of Dk+1 elements
 
         self.activations = None  # list of R+1 (N,Dk) matrix
         self.units = None  # list of R+1 (N,Dk) matrix
-        self.y = None  # (N,Dr) matrix    
-        
+        self.y = None  # (N,Dr) matrix
+
         self.init_weights()
 
 # %% definition of activation functions and derivatives
     @staticmethod
-    def sigmoid(z):
-        return 1 / (1 + np.exp(-z))
+    def scalar_sigmoid(x):
+        if (x>=0):
+            return 1 / (1 + np.exp(-z))
+        else:
+            return np.exp(z)/(np.exp(z) + 1)
+
+    sigmoid = np.vectorize(MLP.scalar_sigmoid)
 
     @staticmethod
     def dsigmoid(z):
@@ -104,14 +108,14 @@ class MLP(object):
 
     @staticmethod
     def cost_L2(y, t_data):
-        return 0.5*np.sum((y - t_data)**2)
+        return 0.5 * np.sum((y - t_data)**2)
 
     # %% simple weights initialization
 
     def init_weights(self):
 
         if self.init_seed:
-            np.random.seed(self.seed)
+            np.random.seed(self.init_seed)
 
         weights_list = []
         biases_list = []
@@ -124,7 +128,6 @@ class MLP(object):
 
         self.weights_list = weights_list
         self.biases_list = biases_list
-        
 
     # %% feed forward pass
     # x = (N,D0) matrix
@@ -160,12 +163,12 @@ class MLP(object):
         self.get_activations_and_units(x)
 
         N = x.shape[0]
-        grad_w_list = [0]*self.nb_layers
-        grad_b_list = [0]*self.nb_layers
+        grad_w_list = [0] * self.nb_layers
+        grad_b_list = [0] * self.nb_layers
 
         delta_k1 = None  # delta value for the next layer
 
-        ks = range(1, self.nb_layers+1)
+        ks = range(1, self.nb_layers + 1)
         ks.reverse()
         for k in ks:  # r, ..., 1
 
@@ -174,88 +177,36 @@ class MLP(object):
                 # weights of the (k+1)-th layer
                 w = self.weights_list[k]
                 # activation function derivative on layer k
-                dh = self.diff_activation_functions[k-1]
+                dh = self.diff_activation_functions[k - 1]
                 # activations from layer k
                 a = self.activations[k]
-                delta_k = (delta_k1.dot(w.T))*dh(a)
+                delta_k = (delta_k1.dot(w.T)) * dh(a)
             else:
                 # we can assume the derivative of En respect to the last
                 # activations layer is y-t
                 delta_k = self.y - t
 
-            
-            grad_wk = (np.einsum('ij,ik', self.units[k-1], delta_k)/N) + (beta * self.weights_list[k-1])
-            grad_w_list[k-1] = grad_wk
+            grad_wk = (np.einsum(
+                'ij,ik', self.units[k - 1], delta_k) / N) + (beta * self.weights_list[k - 1])
+            grad_w_list[k - 1] = grad_wk
 
-            grad_bk = np.sum(delta_k, axis=0)/N
-            grad_b_list[k-1] = grad_bk
+            grad_bk = np.sum(delta_k, axis=0) / N
+            grad_b_list[k - 1] = grad_bk
 
             delta_k1 = delta_k
 
         ##
 
-        self.grad_w_list = grad_w_list
-        self.grad_b_list = grad_b_list
+        return grad_w_list, grad_b_list
 
     # %%
     # training method for the neuron
-    def train(self, x_data, t_data,
-              epochs, batch_size,
-              initialize_weights=False, 
-              method='SGD',
-              epsilon=0.01,
-              beta=0,
-              gamma=0.9,
-              print_cost=False):
-        
-                
-        sgd_args = {}
-        def sgd(): 
-            self.get_gradients(x_data[indexes], t_data[indexes], beta)
-            self.weights_list = [(self.weights_list[k] -
-                                     epsilon*self.grad_w_list[k])
-                                     for k in range(self.nb_layers)]
-            self.biases_list = [(self.biases_list[k] -
-                                    epsilon*self.grad_b_list[k])
-                                    for k in range(self.nb_layers)]
-        
-        momentum_args = {"v_w":[0]*self.nb_layers, "v_b":[0]*self.nb_layers}
-        def momentum(v_w, v_b):
+    def train(self, x_data, t_data, epochs, batch_size,
+              initialize_weights=False, print_cost=False,
+              **method_args):
 
-            self.get_gradients(x_data[indexes], t_data[indexes], beta)
-            for k in range(self.nb_layers):
-                v_w[k] = gamma * v_w[k] + epsilon*self.grad_w_list[k]
-                v_b[k] = gamma * v_b[k] + epsilon*self.grad_b_list[k]
+        opt = mlpo.Optimizer.get_optimizer(self, **method_args)
 
-                self.weights_list[k] = (self.weights_list[k] - v_w[k])
-                self.biases_list[k] = (self.biases_list[k] - v_b[k])
-            
-        nesterov_args = {"v_w":[0]*self.nb_layers, "v_b":[0]*self.nb_layers}
-        def nesterov(v_w, v_b):
-
-            w_aux, b_aux = self.weights_list, self.biases_list
-
-            self.weights_list = [self.weights_list[k] - gamma*v_w[k]
-                                     for k in range(self.nb_layers)]
-            self.biases_list = [self.biases_list[k] - gamma*v_b[k]
-                                    for k in range(self.nb_layers)]            
-
-            self.get_gradients(x_data[indexes], t_data[indexes], beta)
-
-            for k in range(self.nb_layers):
-
-                v_w[k] = gamma * v_w[k] + epsilon*self.grad_w_list[k]
-                v_b[k] = gamma * v_b[k] + epsilon*self.grad_b_list[k]
-
-                self.weights_list[k] = w_aux[k] - epsilon*v_w[k]
-                self.biases_list[k] = b_aux[k] - epsilon*v_b[k]
-
-
-        dict_method = {"SGD":sgd, "momentum":momentum, "nesterov":nesterov}
-
-        dict_args = {"SGD":sgd_args, "momentum":momentum_args, "nesterov":nesterov_args}
-        
-        
         if initialize_weights:
             self.init_weights()
 
@@ -266,9 +217,10 @@ class MLP(object):
         for _ in range(epochs):
             np.random.shuffle(index_list)
             for batch in range(nb_batches):
-                indexes = index_list[batch*batch_size:(batch+1)*batch_size]
-                dict_method[method](**(dict_args[method]))
-            
+                indexes = index_list[batch *
+                                     batch_size:(batch + 1) * batch_size]
+                opt.process_batch(x_data[indexes], t_data[indexes])
+
             if print_cost:
                 x_batch = x_data
                 t_batch = t_data
@@ -289,6 +241,7 @@ class MLP(object):
 
 # %% let's experiment
 
+
 if __name__ == '__main__':
 
     # %% Create data
@@ -300,7 +253,7 @@ if __name__ == '__main__':
     x_data_red = np.random.randn(nb_red, 2) + np.array([10, 10])
 
     x_data = np.vstack((x_data_black, x_data_red))
-    t_data = np.asarray([0]*nb_black + [1]*nb_red).reshape(nb_data, 1)
+    t_data = np.asarray([0] * nb_black + [1] * nb_red).reshape(nb_data, 1)
 
 # %% Net structure
     D = x_data.shape[1]  # initial dimension
@@ -318,5 +271,6 @@ if __name__ == '__main__':
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=10, initialize_weights=True, epsilon=0.1,
+              epochs=1000, batch_size=20, initialize_weights=False, method='adam', eta=0.1, 
+              beta = 0, gamma = 0.9, beta_1=0.9, beta_2=0.999, epsilon=1e-8,
               print_cost=True)
