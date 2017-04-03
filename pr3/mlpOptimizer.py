@@ -116,8 +116,8 @@ class Adagrad(Optimizer):
         self.beta = kwargs.pop("beta", 0)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         
-        self.G_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
-        self.G_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
+        self.G_w_list = [np.ones(w.shape) for w in mlp.weights_list] #seguro que es ones y no zeros?
+        self.G_b_list = [np.ones(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
