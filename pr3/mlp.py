@@ -57,14 +57,11 @@ class MLP(object):
         self.init_weights()
 
 # %% definition of activation functions and derivatives
-    @staticmethod
-    def scalar_sigmoid(x):
-        if (x>=0):
-            return 1 / (1 + np.exp(-z))
-        else:
-            return np.exp(z)/(np.exp(z) + 1)
 
-    sigmoid = np.vectorize(MLP.scalar_sigmoid)
+    #sigmoid = np.vectorize(lambda x: 1 / (1 + np.exp(-x)) if x>=0 else np.exp(x)/(np.exp(x) + 1))
+    @staticmethod
+    def sigmoid(z):
+        return np.where(z>=0, 1 / (1 + np.exp(-z)), np.exp(z)/(np.exp(z) + 1))
 
     @staticmethod
     def dsigmoid(z):
