@@ -116,11 +116,10 @@ class Adagrad(Optimizer):
         self.beta = kwargs.pop("beta", 0)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         
-        self.G_w_list = [np.ones(w.shape) for w in mlp.weights_list] #seguro que es ones y no zeros?
-        self.G_b_list = [np.ones(b.shape) for b in mlp.biases_list]
+        self.G_w_list = [np.zeros(w.shape) for w in mlp.weights_list] 
+        self.G_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
-
         grad_w_list, grad_b_list = self.mlp.get_gradients(
             x_data, t_data, self.beta)
 
@@ -149,8 +148,8 @@ class Adadelta(Optimizer):
             new_avg_b = np.zeros(mlp.K_list[layer + 1])
             self.avg_w_list.append(new_avg_w)
             self.avg_b_list.append(new_avg_b)
-            new_avg_delta_w = (0.1**2)*np.ones((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_avg_delta_b = (0.1**2)*np.ones(mlp.K_list[layer + 1])
+            new_avg_delta_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
+            new_avg_delta_b = np.zeros(mlp.K_list[layer + 1])
             self.avg_delta_w_list.append(new_avg_delta_w)
             self.avg_delta_b_list.append(new_avg_delta_b)
     
@@ -179,24 +178,29 @@ class Adadelta(Optimizer):
                             for avg_b, grad_b 
                             in zip(self.avg_b_list, grad_b_list)]
         
-        old_weights_list = self.mlp.weights_list
         
-        self.mlp.weights_list = [w - (np.sqrt(avg_delta_w + self.epsilon) / np.sqrt(avg_w + self.epsilon)) * grad_w 
-                                 for w, avg_delta_w, avg_w, grad_w in
-                                 zip(self.mlp.weights_list, self.avg_delta_w_list, self.avg_w_list, grad_w_list)]
         
-        delta_weights_list = [w_old - w_new for w_old, w_new in zip(old_weights_list,self.mlp.weights_list)]
+        delta_weights_list = [- (np.sqrt(avg_delta_w + self.epsilon) / np.sqrt(avg_w + self.epsilon)) * grad_w 
+                                 for avg_delta_w, avg_w, grad_w in
+                                 zip(self.avg_delta_w_list, self.avg_w_list, grad_w_list)]
+        
+        self.mlp.weights_list = [w + delta_w 
+                                 for w, delta_w in
+                                 zip(self.mlp.weights_list, delta_weights_list)]
+        
+        
         
         self.avg_delta_w_list = [self.gamma*avg_delta_w + (1-self.gamma)*(delta_w**2) for avg_delta_w, delta_w in
                                  zip(self.avg_w_list, delta_weights_list)]
         
-        old_biases_list = self.mlp.biases_list
+        delta_biases_list = [- (np.sqrt(avg_delta_b + self.epsilon) / np.sqrt(avg_b + self.epsilon)) * grad_b 
+                                 for avg_delta_b, avg_b, grad_b in
+                                 zip(self.avg_delta_b_list, self.avg_b_list, grad_b_list)]
         
-        self.mlp.biases_list = [b - (np.sqrt(avg_delta_b + self.epsilon) / np.sqrt(avg_b + self.epsilon)) * grad_b 
-                                 for b, avg_delta_b, avg_b, grad_b in
-                                 zip(self.mlp.biases_list, self.avg_delta_b_list, self.avg_b_list, grad_b_list)]
+        self.mlp.biases_list = [b + delta_b 
+                                 for b, delta_b in
+                                 zip(self.mlp.biases_list, delta_biases_list)]
         
-        delta_biases_list = [b_old - b_new for b_old, b_new in zip(old_biases_list,self.mlp.biases_list)]
         
         self.avg_delta_b_list = [self.gamma*avg_delta_b + (1-self.gamma)*(delta_b**2) for avg_delta_b, delta_b in
                                  zip(self.avg_b_list, delta_biases_list)]
