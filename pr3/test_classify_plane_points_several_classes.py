@@ -8,7 +8,7 @@ from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
-from mlp_ignacio import MLP
+from mlp import MLP
 
 
 nb_black = 50
@@ -17,7 +17,7 @@ nb_green = 50
 
 nb_data = nb_black + nb_red + nb_green
 
-s = np.linspace(0, 2*np.pi, nb_black)
+s = np.linspace(0, 2 * np.pi, nb_black)
 
 x_black = np.vstack([np.cos(s), np.sin(s)]).T
 x_red = 2 * np.vstack([np.cos(s), np.sin(s)]).T
@@ -36,9 +36,11 @@ K_list = [D, 100, 50, K]
 activation_functions = [MLP.relu] * 2 + [MLP.softmax]
 diff_activation_functions = [MLP.drelu] * 2
 
-methods = ['SGD', 'momentum', 'nesterov', 'adagrad',
+"""methods = ['SGD', 'momentum', 'nesterov', 'adagrad',
            'adadelta', 'RMS_prop', 'adam']
+"""
 
+methods = ['SGD']
 fig, ax = plt.subplots(2, 4)
 
 list_pairs = [(r, c) for r in range(2) for c in range(4)]

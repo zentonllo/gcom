@@ -58,10 +58,11 @@ class MLP(object):
 
 # %% definition of activation functions and derivatives
 
-    #sigmoid = np.vectorize(lambda x: 1 / (1 + np.exp(-x)) if x>=0 else np.exp(x)/(np.exp(x) + 1))
+    # sigmoid = np.vectorize(lambda x: 1 / (1 + np.exp(-x)) if x>=0 else
+    # np.exp(x)/(np.exp(x) + 1))
     @staticmethod
     def sigmoid(z):
-        return np.where(z>=0, 1 / (1 + np.exp(-z)), np.exp(z)/(np.exp(z) + 1))
+        return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (np.exp(z) + 1))
 
     @staticmethod
     def dsigmoid(z):
@@ -77,9 +78,8 @@ class MLP(object):
 
     @staticmethod
     def drelu(z):
-        z[z >= 0] = 1   # drelu(0)=1 by agreement
-        z[z < 0] = 0
-        return z
+        # drelu(0)=1 by agreement
+        return np.where(z >= 0, 1, 0)
 
     @staticmethod
     def identity(z):
@@ -91,18 +91,23 @@ class MLP(object):
 
     @staticmethod
     def softmax(z):
-		x = z-np.amax(z)
+        max_value = np.amax(z)
+        x = z - max_value
         sum_exp = np.sum(np.exp(x))
         return np.exp(x) / sum_exp
 
     # %% cost functions
     @staticmethod
     def binary_cross_entropy(y, t_data):
-        return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y))
+        x = np.maximum(y, 10**-15)
+        return -np.sum(t_data * np.log(x) + (1 - t_data) * np.log(1 - x))
+        # return -np.sum(t_data * np.log(y) + (1 - t_data) * np.log(1 - y))
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
-        return -np.sum(t_data * np.log(y))
+        x = np.maximum(y, 10**-15)
+        return -np.sum(t_data * np.log(x))
+        # return -np.sum(t_data * np.log(y))
 
     @staticmethod
     def cost_L2(y, t_data):
@@ -269,6 +274,6 @@ if __name__ == '__main__':
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=20, initialize_weights=False, method='adam', eta=0.1, 
-              beta = 0, gamma = 0.9, beta_1=0.9, beta_2=0.999, epsilon=1e-8,
+              epochs=1000, batch_size=20, initialize_weights=False, method='adam', eta=0.1,
+              beta=0, gamma=0.9, beta_1=0.9, beta_2=0.999, epsilon=1e-8,
               print_cost=True)

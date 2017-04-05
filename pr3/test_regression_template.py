@@ -9,7 +9,7 @@ from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
-from mlp_ignacio import MLP
+from mlp import MLP
 
 def f1(x):
     return 1 / (1 + x**2)
@@ -31,15 +31,15 @@ K_list = [D, 100, K]  # list of dimensions of layers
 activation_functions = [MLP.sigmoid] * 1 + [MLP.identity]
 diff_activation_functions = [MLP.dsigmoid] * 1
 
-methods = ['SGD',
+"""methods = ['SGD',
            'momentum',
            'nesterov',
            'adagrad',
            'adadelta',
            'RMS_prop',
            'adam']
-
-# methods = ['nesterov']
+"""
+methods = ['nesterov']
 
 fig, ax = plt.subplots(2, 7)
 
