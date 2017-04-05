@@ -91,8 +91,9 @@ class MLP(object):
 
     @staticmethod
     def softmax(z):
-        sum_exp = np.sum(np.exp(z))
-        return np.exp(z) / sum_exp
+		x = z-np.amax(z)
+        sum_exp = np.sum(np.exp(x))
+        return np.exp(x) / sum_exp
 
     # %% cost functions
     @staticmethod
