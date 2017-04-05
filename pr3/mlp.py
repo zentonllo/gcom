@@ -58,11 +58,18 @@ class MLP(object):
 
 # %% definition of activation functions and derivatives
 
-    # sigmoid = np.vectorize(lambda x: 1 / (1 + np.exp(-x)) if x>=0 else
-    # np.exp(x)/(np.exp(x) + 1))
+    #@staticmethod
+    #def sigmoid(z):
+     #   return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (np.exp(z) + 1))
+
     @staticmethod
     def sigmoid(z):
-        return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (np.exp(z) + 1))
+        y = np.copy(z)
+        masc1 = y>=0
+        masc2 = y<0
+        y[masc1] = 1 / (1 + np.exp(-y[masc1]))
+        y[masc2] = np.exp(z[masc2]) / (np.exp(z[masc2]) + 1)
+        return y
 
     @staticmethod
     def dsigmoid(z):
