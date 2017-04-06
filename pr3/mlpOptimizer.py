@@ -102,10 +102,8 @@ class Nesterov(Optimizer):
         self.v_b_list = [self.gamma * v_b + self.eta *
                          grad_b for v_b, grad_b in zip(self.v_b_list, grad_b_list)]
 
-        self.mlp.weights_list = [
-            w - self.eta * v_w for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
-        self.mlp.biases_list = [b - self.eta *
-                                v_b for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
+        self.mlp.weights_list = [w - v_w for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
+        self.mlp.biases_list = [b - v_b for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
 
 class Adagrad(Optimizer):
