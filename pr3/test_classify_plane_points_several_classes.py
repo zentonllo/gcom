@@ -58,6 +58,7 @@ for counter, method in enumerate(methods):
     mlp.train(x_data, t_data,
               epochs=200, batch_size=20,
               eta=0.001,
+              beta=0.001,
               method=method,
               print_cost=True,
               initialize_weights=True)

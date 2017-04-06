@@ -161,6 +161,7 @@ class MLP(object):
             activations.append(a)
             # PARA DEBUG
             # print(a)
+            print(self.weights_list[0])
             z = self.activation_functions[i](a)
             units.append(z)
 
