@@ -8,6 +8,7 @@ from __future__ import division, print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 from mlp import MLP
 
 
@@ -40,7 +41,7 @@ diff_activation_functions = [MLP.drelu] * 2
            'adadelta', 'RMS_prop', 'adam']
 """
 
-methods = ['nesterov']
+methods = ['SGD']
 fig, ax = plt.subplots(2, 4)
 
 list_pairs = [(r, c) for r in range(2) for c in range(4)]
@@ -53,9 +54,10 @@ for counter, method in enumerate(methods):
               diff_activation_functions,
               init_seed=5)
 
+    # 200 epochs originalmente
     mlp.train(x_data, t_data,
               epochs=200, batch_size=20,
-              eta=0.01,
+              eta=0.001,
               method=method,
               print_cost=True,
               initialize_weights=True)

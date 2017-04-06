@@ -79,12 +79,13 @@ class MLP(object):
 
     @staticmethod
     def relu(z):
+        # He leido que z * (z > 0) es lo más rápido para la relu
         return np.maximum(z, 0)
 
     @staticmethod
     def drelu(z):
         # drelu(0)=1 by agreement
-        return np.where(z >= 0, 1, 0)
+        return np.where(z > 0, 1, 0)
 
     @staticmethod
     def identity(z):
@@ -96,6 +97,10 @@ class MLP(object):
 
     @staticmethod
     def softmax(z):
+        if z[np.isnan(z)].size > 0:
+            print(z)
+            sys.stdout.flush()
+            sys.exit(0)
         max_value = np.amax(z)
         x = z - max_value
         sum_exp = np.sum(np.exp(x))
@@ -154,6 +159,8 @@ class MLP(object):
             # rows
             a = z.dot(weights_list[i]) + biases_list[i]
             activations.append(a)
+            # PARA DEBUG
+            # print(a)
             z = self.activation_functions[i](a)
             units.append(z)
 
