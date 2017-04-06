@@ -97,13 +97,9 @@ class MLP(object):
 
     @staticmethod
     def softmax(z):
-        if z[np.isnan(z)].size > 0:
-            print(z)
-            sys.stdout.flush()
-            sys.exit(0)
-        max_value = np.amax(z)
-        x = z - max_value
-        sum_exp = np.sum(np.exp(x))
+        max_values = np.amax(z, axis=1).reshape(z.shape[0], 1)
+        x = z - max_values
+        sum_exp = np.sum(np.exp(x), axis=1).reshape(z.shape[0], 1)
         return np.exp(x) / sum_exp
 
     # %% cost functions
@@ -159,9 +155,6 @@ class MLP(object):
             # rows
             a = z.dot(weights_list[i]) + biases_list[i]
             activations.append(a)
-            # PARA DEBUG
-            # print(a)
-            print(self.weights_list[0])
             z = self.activation_functions[i](a)
             units.append(z)
 
