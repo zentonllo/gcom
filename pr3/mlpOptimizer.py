@@ -86,17 +86,16 @@ class Nesterov(Optimizer):
 
         # Creo que hay que hacer la copia a pelo (deep copy) con np.copy()
         # w_aux_list, b_aux_list = self.mlp.weights_list, self.mlp.biases_list
-        w_aux_list = np.copy(self.mlp.weights_list)
-        b_aux_list = np.copy(self.mlp.biases_list)
 
-        self.mlp.weights_list = [w - self.gamma * v_w
+
+        future_weights_list = [w - self.gamma * v_w
                                  for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
 
-        self.mlp.biases_list = [b - self.gamma * v_b
+        future_biases_list = [b - self.gamma * v_b
                                 for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
         grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+            x_data, t_data, self.beta, (future_weights_list, future_biases_list))
 
         self.v_w_list = [self.gamma * v_w + self.eta *
                          grad_w for v_w, grad_w in zip(self.v_w_list, grad_w_list)]
@@ -104,9 +103,9 @@ class Nesterov(Optimizer):
                          grad_b for v_b, grad_b in zip(self.v_b_list, grad_b_list)]
 
         self.mlp.weights_list = [
-            w_aux - self.eta * v_w for w_aux, v_w in zip(w_aux_list, self.v_w_list)]
-        self.mlp.biases_list = [b_aux - self.eta *
-                                v_b for b_aux, v_b in zip(b_aux_list, self.v_b_list)]
+            w - self.eta * v_w for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
+        self.mlp.biases_list = [b - self.eta *
+                                v_b for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
 
 class Adagrad(Optimizer):
@@ -139,24 +138,6 @@ class Adagrad(Optimizer):
 
 class Adadelta(Optimizer):
 
-    def init_aux_structures(self, mlp):
-        self.avg_w_list = []
-        self.avg_b_list = []
-
-        self.avg_delta_w_list = []
-        self.avg_delta_b_list = []
-
-        for layer in range(mlp.nb_layers):
-            new_avg_w = np.zeros((mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_avg_b = np.zeros(mlp.K_list[layer + 1])
-            self.avg_w_list.append(new_avg_w)
-            self.avg_b_list.append(new_avg_b)
-            new_avg_delta_w = np.zeros(
-                (mlp.K_list[layer], mlp.K_list[layer + 1]))
-            new_avg_delta_b = np.zeros(mlp.K_list[layer + 1])
-            self.avg_delta_w_list.append(new_avg_delta_w)
-            self.avg_delta_b_list.append(new_avg_delta_b)
-
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
 
@@ -164,7 +145,11 @@ class Adadelta(Optimizer):
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
 
-        self.init_aux_structures(mlp)
+        self.avg_w_list = [np.zeros(w.shape) for w in self.mlp.weights_list]
+        self.avg_b_list = [np.zeros(b.shape) for b in self.mlp.biases_list]
+
+        self.avg_delta_w_list = [np.zeros(w.shape) for w in self.mlp.weights_list]
+        self.avg_delta_b_list = [np.zeros(b.shape) for b in self.mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
@@ -187,7 +172,7 @@ class Adadelta(Optimizer):
                                  zip(self.mlp.weights_list, delta_weights_list)]
 
         self.avg_delta_w_list = [self.gamma * avg_delta_w + (1 - self.gamma) * (delta_w**2) for avg_delta_w, delta_w in
-                                 zip(self.avg_w_list, delta_weights_list)]
+                                 zip(self.avg_delta_w_list, delta_weights_list)]
 
         delta_biases_list = [- (np.sqrt(avg_delta_b + self.epsilon) / np.sqrt(avg_b + self.epsilon)) * grad_b
                              for avg_delta_b, avg_b, grad_b in
@@ -198,7 +183,7 @@ class Adadelta(Optimizer):
                                 zip(self.mlp.biases_list, delta_biases_list)]
 
         self.avg_delta_b_list = [self.gamma * avg_delta_b + (1 - self.gamma) * (delta_b**2) for avg_delta_b, delta_b in
-                                 zip(self.avg_b_list, delta_biases_list)]
+                                 zip(self.avg_delta_b_list, delta_biases_list)]
 
 
 class RMSprop(Optimizer):
@@ -207,7 +192,7 @@ class RMSprop(Optimizer):
         self.mlp = mlp
 
         self.beta = kwargs.pop("beta", 0)
-        self.eta = kwargs.pop("eta", 0.1)
+        self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
 
@@ -241,7 +226,7 @@ class Adam(Optimizer):
         self.mlp = mlp
 
         self.beta = kwargs.pop("beta", 0)
-        self.eta = kwargs.pop("eta", 0.1)
+        self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.beta_1 = kwargs.pop("beta_1", 0.9)
         self.beta_2 = kwargs.pop("beta_2", 0.999)

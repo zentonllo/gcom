@@ -50,8 +50,6 @@ class MLP(object):
         self.weights_list = None  # list of R (Dk,Dk+1) matrix
         self.biases_list = None  # list of R row vectors of Dk+1 elements
 
-        self.activations = None  # list of R+1 (N,Dk) matrix
-        self.units = None  # list of R+1 (N,Dk) matrix
         self.y = None  # (N,Dr) matrix
 
         self.init_weights()
@@ -64,10 +62,10 @@ class MLP(object):
 
     @staticmethod
     def sigmoid(z):
-        y = np.copy(z)
-        masc1 = y>=0
-        masc2 = y<0
-        y[masc1] = 1 / (1 + np.exp(-y[masc1]))
+        y = np.zeros(z.shape)
+        masc1 = z>=0
+        masc2 = z<0
+        y[masc1] = 1 / (1 + np.exp(-z[masc1]))
         y[masc2] = np.exp(z[masc2]) / (np.exp(z[masc2]) + 1)
         return y
 
@@ -94,7 +92,7 @@ class MLP(object):
 
     @staticmethod
     def didentity(z):  # it only works with numpy arrays
-        return [1] * z.shape[0]
+        return np.ones(z.shape)
 
     @staticmethod
     def softmax(z):
@@ -141,7 +139,12 @@ class MLP(object):
 
     # %% feed forward pass
     # x = (N,D0) matrix
-    def get_activations_and_units(self, x):
+    def get_activations_and_units(self, x, wb=None):
+
+        if wb is None:
+            weights_list, biases_list = self.weights_list, self.biases_list
+        else:
+            weights_list, biases_list = wb
 
         activations = [x]
         units = [x]
@@ -149,28 +152,34 @@ class MLP(object):
         for i in range(self.nb_layers):
             # matrix + row vector, so it adds the vector to each of the matrix
             # rows
-            a = z.dot(self.weights_list[i]) + self.biases_list[i]
+            a = z.dot(weights_list[i]) + biases_list[i]
             activations.append(a)
             z = self.activation_functions[i](a)
             units.append(z)
 
-        self.activations = activations
-        self.units = units
         self.y = z
+
+        return activations, units
 
     # %% backpropagation
     # This function calculates the error gradient for each of the data and
     # averages them. All the gradients are calculated at the same time using
     # (N,?) matrix instead of vectors.
     # We use : x = (N,D0) matrix, t = (N,Dr) matrix, delta_k = (N,Dk) matrix
-    def get_gradients(self, x, t, beta=0):
+    def get_gradients(self, x, t, beta=0, wb=None):
 
         # Slightly different from the class notes due to the separation of bs
         # and Ws and the change of the index to name the weights.
         # The functions returns a list of shifted index (k-th index = (k+1)-th
         # layer gradients; the layer 0 (input) has no Ws)
 
-        self.get_activations_and_units(x)
+        if wb is None:
+            weights_list, biases_list = self.weights_list, self.biases_list
+        else:
+            weights_list, biases_list = wb
+
+
+        activations, units = self.get_activations_and_units(x, wb)
 
         N = x.shape[0]
         grad_w_list = [0] * self.nb_layers
@@ -185,19 +194,19 @@ class MLP(object):
             # we calculate the new delta values
             if (k < self.nb_layers):
                 # weights of the (k+1)-th layer
-                w = self.weights_list[k]
+                w = weights_list[k]
                 # activation function derivative on layer k
                 dh = self.diff_activation_functions[k - 1]
                 # activations from layer k
-                a = self.activations[k]
+                a = activations[k]
                 delta_k = (delta_k1.dot(w.T)) * dh(a)
             else:
                 # we can assume the derivative of En respect to the last
                 # activations layer is y-t
-                delta_k = self.y - t
+                delta_k = units[k] - t
 
             grad_wk = (np.einsum(
-                'ij,ik', self.units[k - 1], delta_k) / N) + (beta * self.weights_list[k - 1])
+                'ij,ik', units[k - 1], delta_k) / N) + (beta * weights_list[k - 1])
             grad_w_list[k - 1] = grad_wk
 
             grad_bk = np.sum(delta_k, axis=0) / N
