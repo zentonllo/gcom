@@ -40,7 +40,7 @@ diff_activation_functions = [MLP.drelu] * 2
            'adadelta', 'RMS_prop', 'adam']
 """
 
-methods = ['SGD']
+methods = ['nesterov']
 fig, ax = plt.subplots(2, 4)
 
 list_pairs = [(r, c) for r in range(2) for c in range(4)]
