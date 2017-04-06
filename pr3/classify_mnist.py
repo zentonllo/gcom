@@ -23,7 +23,7 @@ one_hot_tdata[np.arange(nb_data), t_data] = 1
 
 
 K_list = [784, 100, 50, 10]
-activation_functions = [MLP.relu] * 2 + [MLP.softmax]
+activation_functions = [MLP.relu] * 2 + [MLP.sigmoid]
 
 diff_activation_functions = [MLP.drelu] * 2
 
@@ -35,14 +35,13 @@ mlp = MLP(K_list,
 
 if 1:
     x_test, t_test = test_set
-    nb_epochs = 50
+    nb_epochs = 5
 
     for epoch in range(nb_epochs):
-        initialize_weights = (epoch == 1)
         mlp.train(x_data, one_hot_tdata,
                   epochs=20,
                   batch_size=50,
-                  initialize_weights=initialize_weights,
+                  initialize_weights=(epoch == 0),
                   eta=0.01,
                   beta=0,
                   method='adam',

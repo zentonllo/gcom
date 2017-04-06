@@ -1,41 +1,55 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
+Checking the implementation of MLP
+Data in points along two logarithmic spirals
 @author: avaldes
 """
+
 from __future__ import division, print_function
 
 import numpy as np
 import matplotlib.pyplot as plt
+# import time
 
 from mlp import MLP
 
+# create data
 
-nb_black = 50
-nb_red = 50
-nb_green = 50
+nb_black = 100
+nb_red = 100
+nb_data = nb_black + nb_red
 
-nb_data = nb_black + nb_red + nb_green
+s = np.linspace(0, 4*np.pi, nb_black)
 
-s = np.linspace(0, 2*np.pi, nb_black)
+x_black = np.vstack([np.log(1 + s) * np.cos(s),
+                     np.log(1 + s) * np.sin(s)]).T
+x_red = np.vstack([-np.log(1 + s) * np.cos(s),
+                   -np.log(1 + s) * np.sin(s)]).T
 
-x_black = np.vstack([np.cos(s), np.sin(s)]).T
-x_red = 2 * np.vstack([np.cos(s), np.sin(s)]).T
-x_green = 3 * np.vstack([np.cos(s), np.sin(s)]).T
+x_data = np.vstack((x_black, x_red))
 
-x_data = np.vstack((x_black, x_red, x_green))
+t_data = np.asarray([0]*nb_black + [1]*nb_red).reshape(nb_data, 1)
 
-t_list = [1, 0, 0] * nb_black + [0, 1, 0] * nb_red + [0, 0, 1] * nb_green
-t_data = np.asarray(t_list).reshape(nb_data, 3)
 
-D = x_data.shape[1]
-K = 3
+#  Net structure
 
-K_list = [D, 100, 50, K]
+D = x_data.shape[1]  # initial dimension
+K = 1  # final dimension
 
-activation_functions = [MLP.relu] * 2 + [MLP.softmax]
-diff_activation_functions = [MLP.drelu] * 2
+#  You must find the best MLP structure in order to
+#  misclassify as few points as possible. Training time will be
+#  measured too.
+#  You can use at most 3000 weights and 2000 epochs.
+#  For example:
 
+K_list = [D, 20, 20, 20, K]  # list of dimensions of layers
+
+activation_functions = [MLP.relu] * 3 + [MLP.sigmoid]
+
+diff_activation_functions = [MLP.drelu] * 3
+
+# network training
 methods = ['SGD', 'momentum', 'nesterov', 'adagrad',
            'adadelta', 'RMS_prop', 'adam']
 
@@ -45,14 +59,14 @@ list_pairs = [(r, c) for r in range(2) for c in range(4)]
 
 for counter, method in enumerate(methods):
     method = methods[counter]
-
+    print(method)
     mlp = MLP(K_list,
               activation_functions,
               diff_activation_functions,
               init_seed=5)
 
     mlp.train(x_data, t_data,
-              epochs=200, batch_size=20,
+              epochs=1000, batch_size=20,
               eta=0.01,
               method=method,
               print_cost=True,
@@ -68,23 +82,20 @@ for counter, method in enumerate(methods):
     mlp.get_activations_and_units(x_pts)
 
     grid_size = X.shape[0]
-    print(method)
+    Z = mlp.y.reshape(grid_size, grid_size)
+    
     r, c = list_pairs[counter]
     curr_axes = ax[r, c]
     curr_axes.axis('equal')
-    curr_axes.scatter(X, Y, facecolors=mlp.y)
+    curr_axes.contourf(X, Y, Z, 50)
 
     curr_axes.scatter(x_data[:, 0], x_data[:, 1],
                       marker='o',
                       s=1,
                       color='black')
-    
     curr_axes.set_xlim(-4, 4)
     curr_axes.set_ylim(-4, 4)
-    curr_axes.set_title(method)
+    curr_axes.set_xlabel(method)
 
-    mlp.get_activations_and_units(x_data)
-    error = mlp.softmax_cross_entropy(mlp.y, t_data)
-    curr_axes.set_xlabel('error= %.3f' % error)
 
 plt.show()
