@@ -22,7 +22,7 @@ t_data = f1(x_data)
 D = 1
 K = 1
 
-K_list = [D, 300, K]  # list of dimensions of layers
+K_list = [D, 500, K]  # list of dimensions of layers
 
 activation_functions = [MLP.sigmoid] * 1 + [MLP.identity]
 diff_activation_functions = [MLP.dsigmoid] * 1

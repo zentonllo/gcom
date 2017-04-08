@@ -35,13 +35,14 @@ mlp = MLP(K_list,
 
 if 1:
     x_test, t_test = test_set
-    nb_epochs = 5
+    nb_epochs = 1
 
     for epoch in range(nb_epochs):
+        initialize_weights = (epoch == 0)
         mlp.train(x_data, one_hot_tdata,
-                  epochs=20,
+                  epochs=50,
                   batch_size=50,
-                  initialize_weights=(epoch == 0),
+                  initialize_weights=initialize_weights,
                   eta=0.01,
                   beta=0,
                   method='adam',
@@ -57,5 +58,5 @@ if 0:
     np.load('./mnist_weights.npy')
     np.load('./mnist_biases.npy')
 
-np.save('mnist_weights', mlp.weights_list, allow_pickle=True)
-np.save('mnist_biases', mlp.biases_list, allow_pickle=True)
+np.save('mnist_weights_v2', mlp.weights_list, allow_pickle=True)
+np.save('mnist_biases_v2', mlp.biases_list, allow_pickle=True)
