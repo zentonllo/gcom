@@ -1,5 +1,29 @@
 # -*- coding: utf-8 -*-
+"""Module modeling a Multilayer Perceptron, featuring a tiny example
 
+Example
+-------
+
+    Executing this script will run a test consisting on training two linearly
+    separable set of points
+
+    $ python mlp.py
+
+    On the other hand, we can import this module and instanciating an Multi-
+    layer Perceptron in the following way:
+
+        mlp = MLP(K_list, activation_functions, diff_activation_functions)
+
+    Then, we train the MLP in this fashion:
+
+        mlp.train(x_data, t_data,
+              epochs=1000, batch_size=20, initialize_weights=False,
+              method='adam', eta=0.1, beta=0, gamma=0.9, beta_1=0.9,
+              beta_2=0.999, epsilon=1e-8, print_cost=True)
+
+    These arguments are widely explained in the MLP train method
+
+"""
 from __future__ import division, print_function
 
 import sys
@@ -10,33 +34,63 @@ __author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
 
 class MLP(object):
+    """Class that models a Multilayer Perceptron
 
-    # Here are some appreciations about notation and the structure of vectors
-    # and matrix:
-    # N = data number
-    # R = layers number (without the imput layer, as it has no activation
-    #     functions nor weights subindex will be used to name these layers,
-    #     with 0 being the input layer.
-    # Dk = number of neurons on layer k
+    Here they are some notation and assumptions that have been made throughout
+    this module:
 
-    # The weights' matrix W for each layer will have dimension (Dk, Dk+1)
-    # Wij is the i-th weight of the j-th neuron on layer k+1. This decision is
-    # forced because of the template, so:
-    # to operate with a units vector on the matrix, you have to multiply by the
-    # left and so both the activations and the units will be row vectors.
+        - N: input data examples
+        - R: number of layers (the input layer is not considered, and it will
+                               be named as the 0-layer since it doesn't have
+                               activation functions nor weights matrix)
+        - Dk: number of neurons on k-layer
 
-    # The matrix that group vectors with N different data (like the matrix x or
-    # y) will have a row for each data, so they'll have dimension (N,?).
+        - A weights matrix on each layer has dimension (Dk, Dk+1). An element
+          placed in the i-th row, j-th columns can be seen as the i-th weight
+          of the j-th neuron on layer k+1. Hence, units will multiply the
+          weights matrixes by their left hand side
+        - The matrix which groups the N different input data examples places
+          each one of them in rows.
+        - Weights and biases matrixes for the k-th layer can be found in the
+          (k-1)-th index of the lists which hold all these matrixes. It is
+          important to keep this gap in mind
+        -
 
-    # The lists of weights' and biases' matrix have the k-th layer data in the
-    # (k-1)-th index. It's important to keep this phase shift in mind
+    Attributes
+    ----------
+    attr1 : str
+        Description of `attr1`.
+    attr2 : :obj:`int`, optional
+        Description of `attr2`.
 
-    # self.nb_layers = R
+    """
 
     def __init__(self, K_list,
                  activation_functions, diff_activation_functions,
                  init_seed=None):
+        """Example of docstring on the __init__ method.
 
+        The __init__ method may be documented in either the class level
+        docstring, or as a docstring on the __init__ method itself.
+
+        Either form is acceptable, but the two should not be mixed. Choose one
+        convention to document the __init__ method and be consistent with it.
+
+        Note
+        ----
+        Do not include the `self` parameter in the ``Parameters`` section.
+
+        Parameters
+        ----------
+        param1 : str
+            Description of `param1`.
+        param2 : list(str)
+            Description of `param2`. Multiple
+            lines are supported.
+        param3 : :obj:`int`, optional
+            Description of `param3`.
+
+        """
         self.K_list = K_list
         self.nb_layers = len(K_list) - 1  # = R
 
@@ -57,14 +111,15 @@ class MLP(object):
 # %% definition of activation functions and derivatives
 
     #@staticmethod
-    #def sigmoid(z):
-     #   return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (np.exp(z) + 1))
+    # def sigmoid(z):
+     # return np.where(z >= 0, 1 / (1 + np.exp(-z)), np.exp(z) / (np.exp(z) +
+     # 1))
 
     @staticmethod
     def sigmoid(z):
         y = np.zeros(z.shape)
-        masc1 = z>=0
-        masc2 = z<0
+        masc1 = z >= 0
+        masc2 = z < 0
         y[masc1] = 1 / (1 + np.exp(-z[masc1]))
         y[masc2] = np.exp(z[masc2]) / (np.exp(z[masc2]) + 1)
         return y
@@ -141,7 +196,25 @@ class MLP(object):
     # %% feed forward pass
     # x = (N,D0) matrix
     def get_activations_and_units(self, x, wb=None):
+        """Class methods are similar to regular functions.
 
+        Note
+        ----
+        Do not include the `self` parameter in the ``Parameters`` section.
+
+        Parameters
+        ----------
+        param1
+            The first parameter.
+        param2
+            The second parameter.
+
+        Returns
+        -------
+        bool
+            True if successful, False otherwise.
+
+        """
         if wb is None:
             weights_list, biases_list = self.weights_list, self.biases_list
         else:
@@ -178,7 +251,6 @@ class MLP(object):
             weights_list, biases_list = self.weights_list, self.biases_list
         else:
             weights_list, biases_list = wb
-
 
         activations, units = self.get_activations_and_units(x, wb)
 

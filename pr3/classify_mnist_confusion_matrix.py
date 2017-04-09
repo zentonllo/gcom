@@ -11,27 +11,19 @@ from sklearn.metrics import confusion_matrix
 
 # Found at: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
 def plot_confusion_matrix(cm, classes,
-                          normalize=False,
                           title='Confusion matrix',
                           cmap=plt.cm.Blues):
     """
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
+    
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
     plt.xticks(tick_marks, classes, rotation=45)
     plt.yticks(tick_marks, classes)
-
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    print(cm)
 
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
@@ -79,8 +71,8 @@ if 1:
     for epoch in range(nb_epochs):
         initialize_weights = (epoch == 0)
         mlp.train(x_data, one_hot_tdata,
-                  epochs=50,
-                  batch_size=50,
+                  epochs=1000,
+                  batch_size=60,
                   initialize_weights=initialize_weights,
                   eta=0.01,
                   beta=0,
@@ -89,8 +81,12 @@ if 1:
 
         mlp.get_activations_and_units((x_test - mean_image) / 255)
         nb_correct = np.sum(np.equal(t_test, np.argmax(mlp.y, axis=1)))
-        sys.stdout.write('fallos en los datos de test = %d, epoch= %d\r'
+        sys.stdout.write('aciertos en los datos de test = %d, epoch= %d\n'
+                         % (nb_correct, epoch))
+        sys.stdout.write('fallos en los datos de test = %d, epoch= %d\n'
                          % (10000 - nb_correct, epoch))
+        sys.stdout.write('porcentaje de aciertos en los datos de test = %d\n'
+                         % ((nb_correct/10000)*100))
         sys.stdout.flush()
 
 if 0:
@@ -102,13 +98,16 @@ np.save('mnist_biases_v2', mlp.biases_list, allow_pickle=True)
 
 
 class_names = np.array(['0','1','2','3','4','5','6','7','8','9'])
+
 # Compute confusion matrix
 cnf_matrix = confusion_matrix(t_test, np.argmax(mlp.y, axis=1))
-np.set_printoptions(precision=2)
+
+
 
 # Plot non-normalized confusion matrix
 plt.figure()
 plot_confusion_matrix(cnf_matrix, classes=class_names,
                       title='Confusion matrix, without normalization')
+
 
 plt.show()
