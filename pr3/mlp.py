@@ -54,15 +54,29 @@ class MLP(object):
         - Weights and biases matrixes for the k-th layer can be found in the
           (k-1)-th index of the lists which hold all these matrixes. It is
           important to keep this gap in mind
-        -
 
     Attributes
     ----------
-    attr1 : str
-        Description of `attr1`.
-    attr2 : :obj:`int`, optional
-        Description of `attr2`.
-
+    K_list : [int]
+        List containing (in order) the number of neurons on each layer (including the 
+        input and the output layer)
+    nb_layers : int
+        Number of layers in the neuronal networks (excluding the input one)
+    activation_functions : [function]
+        List of the activation functions used on each layer
+    diff_activation_functions : [function] 
+        List holding the derivatives functions of the corresponding 
+        activation ones used on each layer
+    init_seed : int 
+        Seed used in order to initialize the weights    
+    weights_list : [np.array]
+        List which holds in its (k-1)-th index the weights matrix corres-
+        ponding to the k-th layer
+    biases_list : [np.array]
+        List which holds in its (k-1)-th index the bias vector corres-
+        ponding to the k-th layer
+    y : [np.array]
+        Multilayer Perceptron outputs for certain input data 
     """
 
     def __init__(self, K_list,
