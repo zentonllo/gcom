@@ -9,7 +9,7 @@ __author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
 
 class Optimizer(object):
-
+    
     @staticmethod
     def get_optimizer(mlp, **kwargs):
 
@@ -17,7 +17,8 @@ class Optimizer(object):
                                 'nesterov': Nesterov, 'adagrad': Adagrad,
                                 'adadelta': Adadelta, 'RMS_prop': RMSprop,
                                 'adam': Adam}
-
+        
+        
         method_name = kwargs.pop("method", "SGD")
         method = dic_learning_methods[method_name]
         return method(mlp, **kwargs)
@@ -27,14 +28,12 @@ class SGD(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
+        
         self.eta = kwargs.pop("eta", 0.1)
-        self.beta = kwargs.pop("beta", 0)
 
     def process_batch(self, x_data, t_data):
 
-        grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+        grad_w_list, grad_b_list = self.mlp.get_gradients(x_data, t_data)
 
         self.mlp.weights_list = [w - self.eta * grad_w
                                  for w, grad_w in zip(self.mlp.weights_list, grad_w_list)]
@@ -46,18 +45,16 @@ class Momentum(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
+               
         self.eta = kwargs.pop("eta", 0.1)
         self.gamma = kwargs.pop("gamma", 0.9)
-        self.beta = kwargs.pop("beta", 0)
 
         self.v_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
         self.v_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
-        grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+        grad_w_list, grad_b_list = self.mlp.get_gradients(x_data, t_data)
 
         self.v_w_list = [self.gamma * v_w + self.eta *
                          grad_w for v_w, grad_w in zip(self.v_w_list, grad_w_list)]
@@ -74,10 +71,9 @@ class Nesterov(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
+               
         self.eta = kwargs.pop("eta", 0.1)
         self.gamma = kwargs.pop("gamma", 0.9)
-        self.beta = kwargs.pop("beta", 0)
 
         self.v_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
         self.v_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
@@ -95,7 +91,7 @@ class Nesterov(Optimizer):
                                 for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
         grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta, (future_weights_list, future_biases_list))
+            x_data, t_data, wb=(future_weights_list, future_biases_list))
 
         self.v_w_list = [self.gamma * v_w + self.eta *
                          grad_w for v_w, grad_w in zip(self.v_w_list, grad_w_list)]
@@ -110,17 +106,15 @@ class Adagrad(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
+        
         self.eta = kwargs.pop("eta", 0.1)
-        self.beta = kwargs.pop("beta", 0)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
 
         self.G_w_list = [np.zeros(w.shape) for w in mlp.weights_list]
         self.G_b_list = [np.zeros(b.shape) for b in mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
-        grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+        grad_w_list, grad_b_list = self.mlp.get_gradients(x_data, t_data)
 
         self.G_w_list = [G_w + (grad_w ** 2) for G_w,
                          grad_w in zip(self.G_w_list, grad_w_list)]
@@ -138,8 +132,7 @@ class Adadelta(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
-        self.beta = kwargs.pop("beta", 0)
+        
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
 
@@ -151,8 +144,7 @@ class Adadelta(Optimizer):
 
     def process_batch(self, x_data, t_data):
 
-        grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+        grad_w_list, grad_b_list = self.mlp.get_gradients(x_data, t_data)
 
         self.avg_w_list = [self.gamma * avg_w + (1 - self.gamma) * (grad_w**2)
                            for avg_w, grad_w
@@ -188,8 +180,7 @@ class RMSprop(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
-        self.beta = kwargs.pop("beta", 0)
+        
         self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
@@ -199,8 +190,7 @@ class RMSprop(Optimizer):
 
     def process_batch(self, x_data, t_data):
 
-        grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+        grad_w_list, grad_b_list = self.mlp.get_gradients(x_data, t_data)
 
         self.avg_w_list = [self.gamma * avg_w + (1 - self.gamma) * (grad_w**2)
                            for avg_w, grad_w
@@ -222,8 +212,7 @@ class Adam(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-
-        self.beta = kwargs.pop("beta", 0)
+        
         self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.beta_1 = kwargs.pop("beta_1", 0.9)
@@ -244,7 +233,7 @@ class Adam(Optimizer):
     def process_batch(self, x_data, t_data):
 
         grad_w_list, grad_b_list = self.mlp.get_gradients(
-            x_data, t_data, self.beta)
+            x_data, t_data)
 
         self.v_w_list = [self.beta_2 * v_w + (1 - self.beta_2) * (grad_w**2)
                          for v_w, grad_w

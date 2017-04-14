@@ -71,7 +71,7 @@ if 1:
     for epoch in range(nb_epochs):
         initialize_weights = (epoch == 0)
         mlp.train(x_data, one_hot_tdata,
-                  epochs=1000,
+                  epochs=250,
                   batch_size=60,
                   initialize_weights=initialize_weights,
                   eta=0.01,

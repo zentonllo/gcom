@@ -4,6 +4,9 @@ Test MLP class for regression
 
 @author: avaldes
 """
+# Best results for adagrad in first function and for RMS_prop in both are 
+# using L1 normalization with beta=0.001
+
 from __future__ import division, print_function
 
 import numpy as np
@@ -31,15 +34,15 @@ K_list = [D, 100, K]  # list of dimensions of layers
 activation_functions = [MLP.sigmoid] * 1 + [MLP.identity]
 diff_activation_functions = [MLP.dsigmoid] * 1
 
-"""methods = ['SGD',
+methods = ['SGD',
            'momentum',
            'nesterov',
            'adagrad',
            'adadelta',
            'RMS_prop',
            'adam']
-"""
-methods = ['nesterov']
+
+#methods = ['nesterov']
 
 fig, ax = plt.subplots(2, 7)
 
@@ -56,7 +59,8 @@ for t_data_nb, t_data in enumerate([t_data1, t_data2]):
                   eta=0.01,
                   method=method,
                   gamma=0.9,
-                  beta=0,
+                  beta=0.001,
+                  reg_method='Elastic_Net',
                   beta_1=0.99,
                   beta_2=0.999,
                   initialize_weights=True,
