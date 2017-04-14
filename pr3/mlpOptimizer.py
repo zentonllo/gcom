@@ -9,7 +9,7 @@ __author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
 
 class Optimizer(object):
-    
+
     @staticmethod
     def get_optimizer(mlp, **kwargs):
 
@@ -17,8 +17,7 @@ class Optimizer(object):
                                 'nesterov': Nesterov, 'adagrad': Adagrad,
                                 'adadelta': Adadelta, 'RMS_prop': RMSprop,
                                 'adam': Adam}
-        
-        
+
         method_name = kwargs.pop("method", "SGD")
         method = dic_learning_methods[method_name]
         return method(mlp, **kwargs)
@@ -28,7 +27,7 @@ class SGD(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-        
+
         self.eta = kwargs.pop("eta", 0.1)
 
     def process_batch(self, x_data, t_data):
@@ -45,7 +44,7 @@ class Momentum(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-               
+
         self.eta = kwargs.pop("eta", 0.1)
         self.gamma = kwargs.pop("gamma", 0.9)
 
@@ -71,7 +70,7 @@ class Nesterov(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-               
+
         self.eta = kwargs.pop("eta", 0.1)
         self.gamma = kwargs.pop("gamma", 0.9)
 
@@ -83,12 +82,11 @@ class Nesterov(Optimizer):
         # Creo que hay que hacer la copia a pelo (deep copy) con np.copy()
         # w_aux_list, b_aux_list = self.mlp.weights_list, self.mlp.biases_list
 
-
         future_weights_list = [w - self.gamma * v_w
-                                 for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
+                               for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
 
         future_biases_list = [b - self.gamma * v_b
-                                for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
+                              for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
         grad_w_list, grad_b_list = self.mlp.get_gradients(
             x_data, t_data, wb=(future_weights_list, future_biases_list))
@@ -98,15 +96,17 @@ class Nesterov(Optimizer):
         self.v_b_list = [self.gamma * v_b + self.eta *
                          grad_b for v_b, grad_b in zip(self.v_b_list, grad_b_list)]
 
-        self.mlp.weights_list = [w - v_w for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
-        self.mlp.biases_list = [b - v_b for b, v_b in zip(self.mlp.biases_list, self.v_b_list)]
+        self.mlp.weights_list = [
+            w - v_w for w, v_w in zip(self.mlp.weights_list, self.v_w_list)]
+        self.mlp.biases_list = [b - v_b for b,
+                                v_b in zip(self.mlp.biases_list, self.v_b_list)]
 
 
 class Adagrad(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-        
+
         self.eta = kwargs.pop("eta", 0.1)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
 
@@ -132,15 +132,17 @@ class Adadelta(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-        
+
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
 
         self.avg_w_list = [np.zeros(w.shape) for w in self.mlp.weights_list]
         self.avg_b_list = [np.zeros(b.shape) for b in self.mlp.biases_list]
 
-        self.avg_delta_w_list = [np.zeros(w.shape) for w in self.mlp.weights_list]
-        self.avg_delta_b_list = [np.zeros(b.shape) for b in self.mlp.biases_list]
+        self.avg_delta_w_list = [np.zeros(w.shape)
+                                 for w in self.mlp.weights_list]
+        self.avg_delta_b_list = [np.zeros(b.shape)
+                                 for b in self.mlp.biases_list]
 
     def process_batch(self, x_data, t_data):
 
@@ -180,7 +182,7 @@ class RMSprop(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-        
+
         self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.gamma = kwargs.pop("gamma", 0.9)
@@ -212,7 +214,7 @@ class Adam(Optimizer):
 
     def __init__(self, mlp, **kwargs):
         self.mlp = mlp
-        
+
         self.eta = kwargs.pop("eta", 0.001)
         self.epsilon = kwargs.pop("epsilon", 1e-8)
         self.beta_1 = kwargs.pop("beta_1", 0.9)

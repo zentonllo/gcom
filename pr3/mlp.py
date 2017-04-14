@@ -59,17 +59,17 @@ class MLP(object):
     Attributes
     ----------
     K_list : [int]
-        List containing (in order) the number of neurons on each layer (including the 
-        input and the output layer)
+        List containing (in order) the number of neurons on each layer
+        (including the input and the output layer)
     nb_layers : int
         Number of layers in the neuronal networks (excluding the input one)
     activation_functions : [function]
         Ordered list of the activation functions used on each layer
-    diff_activation_functions : [function] 
-        Ordered list holding the derivatives functions of the corresponding 
+    diff_activation_functions : [function]
+        Ordered list holding the derivatives functions of the corresponding
         activation ones used on each layer
-    init_seed : int 
-        Seed used in order to initialize weights    
+    init_seed : int
+        Seed used in order to initialize weights
     weights_list : np.array
         List which holds in its (k-1)-th index the weights matrix corres-
         ponding to the k-th layer
@@ -83,7 +83,7 @@ class MLP(object):
         implemented: 'L1', 'L2' and 'Elastic_Net' regularizations
     beta : int
         Regularization parameter
-        
+
 
     """
 
@@ -97,14 +97,14 @@ class MLP(object):
         Parameters
         ----------
         K_list : [int]
-             List containing (in order) the number of neurons on each layer (including the 
-             input and the output layer)
+             List containing (in order) the number of neurons on each layer
+             (including the input and the output layer)
         activation_functions : [function]
              Ordered list of the activation functions used on each layer
-        diff_activation_functions : [function] 
-             Ordered list holding the derivatives functions of the corresponding 
-             activation ones used on each layer
-        init_seed : int 
+        diff_activation_functions : [function]
+             Ordered list holding the derivatives functions of the
+             corresponding activation ones used on each layer
+        init_seed : int
             Seed used in order to initialize weights
 
         """
@@ -121,6 +121,10 @@ class MLP(object):
 
         # At the beginning there is no input yet
         self.y = None
+
+        # Regularization parameters will be set afterwards
+        self.beta = None
+        self.reg_method = None
 
         # Initialize weights when instatiating a MLP object
         self.init_weights()
@@ -187,7 +191,7 @@ class MLP(object):
         Returns
         -------
         np.array
-            Element-wise derivative hyperbolic tangent function applied 
+            Element-wise derivative hyperbolic tangent function applied
             to parameter z
 
         """
@@ -207,7 +211,7 @@ class MLP(object):
 
         Notes
         ----------
-        This implementation has been choosen since it is been proved to be a 
+        This implementation has been choosen since it is been proved to be a
         fast way
 
         Source: https://goo.gl/QIiHFP
@@ -284,7 +288,7 @@ class MLP(object):
         Returns
         -------
         np.array
-            Matrix filled with ones (ie, derivative identity function). It has 
+            Matrix filled with ones (ie, derivative identity function). It has
             the exact shape than the input parameter
 
         """
@@ -316,21 +320,21 @@ class MLP(object):
 
     @staticmethod
     def binary_cross_entropy(y, t_data):
-        """Numerically stable implementation of the Binary Cross entropy 
+        """Numerically stable implementation of the Binary Cross entropy
            cost function
 
         Parameters
         ----------
         y : np.array
-            (N,Dr) matrix which contains the Multilayer Perceptron outputs 
+            (N,Dr) matrix which contains the Multilayer Perceptron outputs
             for the input data samples labeled with t_data
 
         t_data : np.array
-            (N,Dr) matrix representing labels for each data sample. If these 
-            labels correspond to a binary classification problems (Dr = 1), 
+            (N,Dr) matrix representing labels for each data sample. If these
+            labels correspond to a binary classification problems (Dr = 1),
             there are as many labels as input data samples. On the other hand,
-            if we have a multiclass classification problem (Dr > 1), 
-            labels for each sample are row-wise stacked 
+            if we have a multiclass classification problem (Dr > 1),
+            labels for each sample are row-wise stacked
 
 
         Returns
@@ -344,21 +348,21 @@ class MLP(object):
 
     @staticmethod
     def softmax_cross_entropy(y, t_data):
-        """Numerically stable implementation of the Softmax Cross entropy 
+        """Numerically stable implementation of the Softmax Cross entropy
            cost function
 
         Parameters
         ----------
         y : np.array
-            (N,Dr) matrix which contains the Multilayer Perceptron outputs 
+            (N,Dr) matrix which contains the Multilayer Perceptron outputs
             for the input data samples labeled with t_data
 
         t_data : np.array
-            (N,Dr) matrix representing labels for each data sample. If these 
-            labels correspond to a binary classification problems (Dr = 1), 
+            (N,Dr) matrix representing labels for each data sample. If these
+            labels correspond to a binary classification problems (Dr = 1),
             there are as many labels as input data samples. On the other hand,
-            if we have a multiclass classification problem (Dr > 1), 
-            labels for each sample are row-wise stacked 
+            if we have a multiclass classification problem (Dr > 1),
+            labels for each sample are row-wise stacked
 
 
         Returns
@@ -372,7 +376,7 @@ class MLP(object):
 
     @staticmethod
     def cost_L2(y, t_data):
-        """Implementation of the sum squared error cost function 
+        """Implementation of the sum squared error cost function
 
         Notes
         ----------
@@ -381,21 +385,21 @@ class MLP(object):
         Parameters
         ----------
         y : np.array
-            (N,Dr) matrix which contains the Multilayer Perceptron outputs 
+            (N,Dr) matrix which contains the Multilayer Perceptron outputs
             for the input data samples labeled with t_data
 
         t_data : np.array
-            (N,Dr) matrix representing labels for each data sample. If these 
-            labels correspond to a binary classification problems (Dr = 1), 
+            (N,Dr) matrix representing labels for each data sample. If these
+            labels correspond to a binary classification problems (Dr = 1),
             there are as many labels as input data samples. On the other hand,
-            if we have a multiclass classification problem (Dr > 1), 
-            labels for each sample are row-wise stacked 
+            if we have a multiclass classification problem (Dr > 1),
+            labels for each sample are row-wise stacked
 
 
         Returns
         -------
         int
-            Sum squared error cost function applied to the MLP outputs and 
+            Sum squared error cost function applied to the MLP outputs and
             labels
 
         """
@@ -441,8 +445,8 @@ class MLP(object):
         Parameters
         ----------
         x : np.array
-            (N,D0) matrix holding each input data sample. The i-th data sample 
-            is stored in the i-th row. 
+            (N,D0) matrix holding each input data sample. The i-th data sample
+            is stored in the i-th row.
         wb : tuple
             Tuple consisting of a weights and a biases list to be used for
             computing the result. If this parameter is not passed then the MLP
@@ -478,27 +482,27 @@ class MLP(object):
     # %% backpropagation
 
     def get_gradients(self, x, t, beta=None, wb=None):
-        """Backpropagation algorithm computing the gradient for both the 
+        """Backpropagation algorithm computing the gradient for both the
            weights and biases on each layer
 
 
         Parameters
         ----------
         x : np.array
-            (N,D0) matrix holding each input data sample. 
+            (N,D0) matrix holding each input data sample.
             The i-th data sample is stored in the i-th row
         t : np.array
-            (N,Dr) matrix representing labels for each data sample. If these 
-            labels correspond to a binary classification problems (Dr = 1), 
+            (N,Dr) matrix representing labels for each data sample. If these
+            labels correspond to a binary classification problems (Dr = 1),
             there are as many labels as input data samples. On the other hand,
-            if we have a multiclass classification problem (Dr > 1), 
-            labels for each sample are row-wise stacked 
+            if we have a multiclass classification problem (Dr > 1),
+            labels for each sample are row-wise stacked
         beta : int
-            Regularization parameter. If the parameter is not passed, then we 
+            Regularization parameter. If the parameter is not passed, then we
             use the MLP attribute which has been previously set
         wb : tuple
             Tuple consisting of a weights and a biases list to be used for
-            computing the feed forward result. If this parameter is not passed 
+            computing the feed forward result. If this parameter is not passed
             then the MLP own weights are used for the computations
 
         Notes
@@ -513,7 +517,7 @@ class MLP(object):
         -------
         Tuple
             Tuple consisting of the list of gradients and biases for each layer
-            Note that k-th index is (k+1)-th layer gradient since layer 0 
+            Note that k-th index is (k+1)-th layer gradient since layer 0
             (input) has no Ws
 
         """
@@ -536,7 +540,7 @@ class MLP(object):
         for k in ks:  # r, ..., 1
 
             # Computing new delta values
-            if (k < self.nb_layers):
+            if k < self.nb_layers:
                 # Weights of the (k+1)-th layer
                 w = weights_list[k]
                 # Obtain derivative activation function on layer k
@@ -548,13 +552,12 @@ class MLP(object):
                 # We can assume the derivative of En respect to the last
                 # activations layer is y-t
                 delta_k = units[k] - t
-            
-            
+
             if beta is None:
                 b = self.beta
             else:
                 b = beta
-            
+
             # Adding the regularization term for the Ws gradient
             reg_term = None
             if self.reg_method is None:
@@ -563,10 +566,11 @@ class MLP(object):
                 reg_term = (b * np.sign(weights_list[k - 1]))
             elif self.reg_method == 'L2':
                 reg_term = (b * weights_list[k - 1])
-            elif self.reg_method == 'Elastic_Net': # Elastic net regularization
-                reg_term = (b * (np.sign(weights_list[k - 1]) + 
-                                    weights_list[k - 1]) )
-                
+            #  Elastic net regularization
+            elif self.reg_method == 'Elastic_Net':
+                reg_term = (b * (np.sign(weights_list[k - 1]) +
+                                 weights_list[k - 1]))
+
             # Thanks to the einsum function we can avoid using another for loop
             # See that gradients are averaged because they are computed at the
             # for all the input data
@@ -592,14 +596,14 @@ class MLP(object):
         Parameters
         ----------
         x_data : np.array
-            (N,D0) matrix holding each input data sample. The i-th data sample 
-            is stored in the i-th row. 
+            (N,D0) matrix holding each input data sample. The i-th data sample
+            is stored in the i-th row.
         t_data : np.array
-            (N,Dr) matrix representing labels for each data sample. If these 
-            labels correspond to a binary classification problems (Dr = 1), 
+            (N,Dr) matrix representing labels for each data sample. If these
+            labels correspond to a binary classification problems (Dr = 1),
             there are as many labels as input data samples. On the other hand,
-            if we have a multiclass classification problem (Dr > 1), 
-            labels for each sample are row-wise stacked 
+            if we have a multiclass classification problem (Dr > 1),
+            labels for each sample are row-wise stacked
         epochs : int
             Number of epochs to be used to train the model
         batch_size : int
@@ -607,7 +611,7 @@ class MLP(object):
         initialize_weights : bool
             Boolean flag which decides if a weight initialization has to be
             performed
-        print_cost : bool 
+        print_cost : bool
             Boolean flag which can be used to display the current cost during
             the train proccess
         beta : int
@@ -691,6 +695,12 @@ if __name__ == '__main__':
 
 # %% Train begins
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=20, initialize_weights=False, method='adam', eta=0.1,
-              beta=0, gamma=0.9, beta_1=0.9, beta_2=0.999, epsilon=1e-8,
+              epochs=1000, batch_size=20, initialize_weights=False,
+              method='adam',
+              eta=0.1,
+              beta=0,
+              gamma=0.9,
+              beta_1=0.9,
+              beta_2=0.999,
+              epsilon=1e-8,
               print_cost=True)

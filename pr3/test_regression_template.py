@@ -4,7 +4,7 @@ Test MLP class for regression
 
 @author: avaldes
 """
-# Best results for adagrad in first function and for RMS_prop in both are 
+# Best results for adagrad in first function and for RMS_prop in both are
 # using L1 normalization with beta=0.001
 
 from __future__ import division, print_function
@@ -14,8 +14,10 @@ import matplotlib.pyplot as plt
 
 from mlp import MLP
 
+
 def f1(x):
     return 1 / (1 + x**2)
+
 
 def f2(x):
     return np.sin(x)
