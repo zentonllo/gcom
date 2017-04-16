@@ -66,8 +66,9 @@ for counter, method in enumerate(methods):
               init_seed=5)
 
     mlp.train(x_data, t_data,
-              epochs=1000, batch_size=20,
+              epochs=2000, batch_size=20,
               eta=0.01,
+              beta=0,
               method=method,
               print_cost=True,
               initialize_weights=True)

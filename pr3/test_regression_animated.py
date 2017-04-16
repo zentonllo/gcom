@@ -22,7 +22,7 @@ t_data = f1(x_data)
 D = 1
 K = 1
 
-K_list = [D, 500, K]  # list of dimensions of layers
+K_list = [D, 1000, K]  # list of dimensions of layers
 
 activation_functions = [MLP.sigmoid] * 1 + [MLP.identity]
 diff_activation_functions = [MLP.dsigmoid] * 1
@@ -46,9 +46,8 @@ for epoch in range(nb_epochs):
     mlp.train(x_data, t_data,
               epochs=1, batch_size=100,
               eta=0.1,
-              method='adam',
+              method='RMS_prop',
               gamma=0.9,
-              beta=0,
               beta_1=0.99,
               beta_2=0.999,
               initialize_weights=(epoch == 0),

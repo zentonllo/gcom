@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import itertools
 from sklearn.metrics import confusion_matrix
 
+# Optimo (97% aciertos) con 250 epochs y 60 batch size
+
 # Found at: http://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
 def plot_confusion_matrix(cm, classes,
                           title='Confusion matrix',
@@ -71,7 +73,7 @@ if 1:
     for epoch in range(nb_epochs):
         initialize_weights = (epoch == 0)
         mlp.train(x_data, one_hot_tdata,
-                  epochs=250,
+                  epochs=1000,
                   batch_size=60,
                   initialize_weights=initialize_weights,
                   eta=0.01,
