@@ -20,7 +20,7 @@ nb_black = 100
 nb_red = 100
 nb_data = nb_black + nb_red
 
-s = np.linspace(0, 4*np.pi, nb_black)
+s = np.linspace(0, 4 * np.pi, nb_black)
 
 x_black = np.vstack([np.log(1 + s) * np.cos(s),
                      np.log(1 + s) * np.sin(s)]).T
@@ -29,8 +29,11 @@ x_red = np.vstack([-np.log(1 + s) * np.cos(s),
 
 x_data = np.vstack((x_black, x_red))
 
-t_data = np.asarray([0]*nb_black + [1]*nb_red).reshape(nb_data, 1)
+t_data = np.asarray([0] * nb_black + [1] * nb_red).reshape(nb_data, 1)
 
+# We do a bit of preprocessing. See how this performs better than the default
+# template
+x_data = np.hstack((x_data, np.sin(x_data)))
 
 #  Net structure
 
@@ -80,11 +83,13 @@ for counter, method in enumerate(methods):
 
     X, Y = np.meshgrid(x, y)
     x_pts = np.vstack((X.flatten(), Y.flatten())).T
+    # Needs preprocessing again to perform the forward propagation
+    x_pts = np.hstack((x_pts, np.sin(x_pts)))
     mlp.get_activations_and_units(x_pts)
 
     grid_size = X.shape[0]
     Z = mlp.y.reshape(grid_size, grid_size)
-    
+
     r, c = list_pairs[counter]
     curr_axes = ax[r, c]
     curr_axes.axis('equal')

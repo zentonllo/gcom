@@ -4,8 +4,6 @@ Test MLP class for regression
 
 @author: avaldes
 """
-# Best results for adagrad in first function and for RMS_prop in both are
-# using L1 normalization with beta=0.001
 
 from __future__ import division, print_function
 
@@ -22,7 +20,11 @@ def f1(x):
 def f2(x):
     return np.sin(x)
 
-
+""" Best results for adagrad in first function and for RMS_prop in both are
+ using L1 normalization with beta=0.001. Best results for the other functions
+ are without  regularization, using the hyperparameters we have hardcoded
+ in this script
+"""
 nb_data = 500
 x_data = np.linspace(-5, 5, nb_data).reshape(nb_data, 1)
 t_data1 = f1(x_data)
@@ -44,7 +46,7 @@ methods = ['SGD',
            'RMS_prop',
            'adam']
 
-#methods = ['nesterov']
+#  methods = ['nesterov']
 
 fig, ax = plt.subplots(2, 7)
 

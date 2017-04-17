@@ -12,8 +12,10 @@ import matplotlib.pyplot as plt
 
 from mlp import MLP
 
+
 def f1(x):
-    return np.cos(5*x)
+    return np.cos(5 * x)
+
 
 nb_data = 500
 x_data = np.linspace(-5, 5, nb_data).reshape(nb_data, 1)
@@ -63,5 +65,4 @@ for epoch in range(nb_epochs):
         dib.set_ydata(mlp.y)
         fig.canvas.draw()
         if 0:
-            plt.savefig('picture'+str(epoch))
-
+            plt.savefig('picture' + str(epoch))

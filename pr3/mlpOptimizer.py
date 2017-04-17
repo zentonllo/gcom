@@ -78,6 +78,7 @@ class SGD(Optimizer):
         Parameter used to update weights and biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the SGD class
 
@@ -135,6 +136,7 @@ class Momentum(Optimizer):
         Update vector for the MLP biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the Momentum class
 
@@ -201,6 +203,7 @@ class Nesterov(Optimizer):
         Update vector for the MLP biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the Nesterov class
 
@@ -274,6 +277,7 @@ class Adagrad(Optimizer):
         G_t terms for the MLP biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the Adagrad class
 
@@ -345,6 +349,7 @@ class Adadelta(Optimizer):
         Adagrad update vector for the MLP biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the Adadelta class
 
@@ -437,6 +442,7 @@ class RMSprop(Optimizer):
         Update vector for the MLP biases
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the RMSprop class
 
@@ -526,6 +532,7 @@ class Adam(Optimizer):
         Counter incrementing in each iteration of the method
 
     """
+
     def __init__(self, mlp, **kwargs):
         """__init__ method for the Adam class
 
