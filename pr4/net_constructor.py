@@ -21,6 +21,8 @@ class NetConstructor(object):
     def __init__(self, layers=layer_list):
         tf.reset_default_graph()
         self.file_writer = None
+        self.logits = None
+        self.output = None
         self.layers  = layers
         self.layers_dict = { 'fc': fc_layer,
                              'conv': conv_layer,
@@ -47,9 +49,7 @@ class NetConstructor(object):
         dim = layer_info['dim']
         
         activation_fn = layer_info['activation']
-        if activation_fn in self.activations_dict
-        
-        h = self.activations_dict[activation_fn]
+
         with tf.name_scope('fc_layer'):
             w_shape = (int(unit.get_shape()[1]), dim)
             # Habría que usar el 'init' del diccionario?
@@ -57,8 +57,15 @@ class NetConstructor(object):
             b = tf.Variable(tf.zeros(dim), name='bias')
             a = tf.add(tf.matmul(unit, w), b, name='activation') #arregladlo
             
-            
-            z = h(a, name='unit')
+            z = None
+            if activation_fn in self.activations_dict:
+        		h = self.activations_dict[activation_fn]
+            	z = h(a, name='unit')
+           	else:
+           		h = self.loss_dict[activation_fn]
+           		self.logits = a
+           		z = h(logits=z, labels=self.y)
+           		self.output = z
             return z
             
     
@@ -94,7 +101,7 @@ class NetConstructor(object):
     
     def create_net(self):
         
-        #  Parseo
+        #  Parseo de dimensiones (cuando es convolucional se pone tupla, cuando es fc se pone número sin tupla)
         nb_input = self.layers[0]['dim']
         if type(nb_input) is not tuple:
             nb_input = (nb_input,)
@@ -108,7 +115,13 @@ class NetConstructor(object):
         for layer in range(1, nb_layers):
             layer_type = self.layers[layer]['type']
             Z  = self.layers_dict[layer_type](Z, self.layers[layer])
-            
+        
+        self.loss = tf.reduce_mean(self.output,name='loss')
+
+        self.init = tf.global_variables_initializer()
+
+        self.saver = tf.train.Saver()
+        file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
                 
     
     def train(self, x_train, t_train,
@@ -116,10 +129,39 @@ class NetConstructor(object):
               batch_size=10,
               method=('adam', method_params)
               seed=seed_nb):
-        pass
+        
+        # TODO: Parseo del optimizador
+        # optimizer = tf.train.AdamOptimizer(0.01, name='optimizer')
+        # self.train_step = optimizer.minimize(self.loss, name='train_step')
+
+        nb_data = x_train.shape[0]
+        index_list = np.arange(nb_data)
+        nb_batches = nb_data // batch_size
+
+        with tf.Session() as sess:
+            sess.run(self.init)
+            for epoch in range(nb_epochs):
+                np.random.shuffle(index_list)
+                for batch in range(nb_batches):
+                    batch_indices = index_list[batch * batch_size:
+                                               (batch + 1) * batch_size]
+                    x_batch = x_train[batch_indices, :]
+                    t_batch = t_train[batch_indices, :]
+                    sess.run(self.train_step,
+                             feed_dict={self.X: x_batch,
+                                        self.y: t_batch})
+                cost = sess.run(self.loss, feed_dict={self.X: x_train,
+                                                      self.y: t_train})
+                sys.stdout.write('cost=%f %d\r' % (cost, epoch))
+                sys.stdout.flush()
+            self.saver.save(sess, LOG_DIR)
 
     def predict(self, x_test):
-        pass
+        with tf.Session() as sess:
+            self.saver.restore(sess, LOG_DIR)
+            pred = tf.nn.softmax(self.logits)
+            y_pred = sess.run(pred, feed_dict={self.x: x_test})
+        return y_pred
 
 
 """
