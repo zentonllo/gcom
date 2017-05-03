@@ -18,17 +18,18 @@ LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
 
 
 class NetConstructor(object):
-    def __init__(self, layers=layer_list):
+    def __init__(self, layers):
         tf.reset_default_graph()
         self.file_writer = None
         self.logits = None
         self.output = None
+        self.train_step = None
         self.layers  = layers
-        self.layers_dict = { 'fc': fc_layer,
-                             'conv': conv_layer,
-                             'maxpool': maxpool_layer,
-                             'dropout': dropout_layer,
-                             'LRN': LRN_layer}
+        self.layers_dict = { 'fc': self.fc_layer,
+                             'conv': self.conv_layer,
+                             'maxpool': self.maxpool_layer,
+                             'dropout': self.dropout_layer,
+                             'LRN': self.LRN_layer}
                              
         self.activations_dict = {'relu': tf.nn.relu,
                                  'sigmoid': tf.nn.sigmoid,
@@ -56,16 +57,15 @@ class NetConstructor(object):
             w = tf.Variable(tf.truncated_normal(w_shape), name='weights')
             b = tf.Variable(tf.zeros(dim), name='bias')
             a = tf.add(tf.matmul(unit, w), b, name='activation') #arregladlo
-            
             z = None
             if activation_fn in self.activations_dict:
-        		h = self.activations_dict[activation_fn]
-            	z = h(a, name='unit')
-           	else:
-           		h = self.loss_dict[activation_fn]
-           		self.logits = a
-           		z = h(logits=z, labels=self.y)
-           		self.output = z
+                h = self.activations_dict[activation_fn]
+                z = h(a, name='unit')
+            else:
+               	h = self.loss_dict[activation_fn]
+               	self.logits = a
+               	z = h(logits=z, labels=self.y)
+               	self.output = z
             return z
             
     
@@ -80,24 +80,25 @@ class NetConstructor(object):
         hor_stride, ver_stride = layer_info['stride']
         k1, k2 = layer_info['kernel_size']
         padding = layer_info['padding']
-        return tf.nn.conv2d(input=unit, filter=[1,k1,k2,1], 
-                            strides=[1,hor_stride,ver_stride, 1], 
+        in_channels = int(unit.get_shape()[3])
+        out_channels = layer_info['channels']
+        return tf.nn.conv2d(input=unit, filter=[k1,k2,in_channels,out_channels], 
+                            strides=[1,ver_stride,hor_stride, 1], 
                             padding=padding, name='conv_layer') 
     
     #Maxpool
     # el stride y el kernel_size deberían ser iguales?
     def maxpool_layer(self, unit, layer_info):
-        hor_stride, ver_stride = layer_info['stride']
-        k1, k2 = layer_info['kernel_size']
+        ver_stride, hor_stride = layer_info['stride']
+        k1, k2 = layer_info['ksize']
         padding = layer_info['padding']
-        return tf.nn.max_pool(value=unit, ksize=[1,k1,k2,1], strides=[1,hor_stride,ver_stride, 1], padding=padding)        
-    
+        return tf.nn.max_pool(value=unit, ksize=[1,k1,k2,1], strides=[1,ver_stride,hor_stride, 1], padding=padding)    
     
     
     #LRN
     def LRN_layer(self, unit, layer_info):
-        bias, alpha, beta, depth_radius = layer_info['LRN_params'] 
-        return tf.nn.local_response_normalization(input=unit, depth_radius=depth_radius, bias=bias, alpha=alpha, beta=beta, name='LRN_layer')
+        k, alpha, beta, r = layer_info['LRN_params'] 
+        return tf.nn.local_response_normalization(input=unit, depth_radius=r, bias=k, alpha=alpha, beta=beta, name='LRN_layer')
     
     def create_net(self):
         
@@ -121,18 +122,37 @@ class NetConstructor(object):
         self.init = tf.global_variables_initializer()
 
         self.saver = tf.train.Saver()
-        file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
+        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
                 
-    
+    @staticmethod
+    def parsea_optimizador(method):
+        name, params = method
+        if name is 'adam':
+            return tf.train.AdamOptimizer(params['lr'], params['beta1'], params['beta2'], params['epsilon'])
+        elif name is 'adadelta':
+            return tf.train.AdadeltaOptimizer(params['lr'], params['rho'], params['epsilon'])
+        elif name is 'adagrad':
+            return tf.train.AdagradOptimizer(params['lr'], params['initial_accumulator'])
+        elif name is 'gradient_descent':
+            return tf.train.GradientDescentOptimizer(params['lr'])
+        elif name is 'momentum':
+            return tf.train.MomentumOptimizer(params['lr'], params['momentum_value'])
+        elif name is 'proximal_adagrad':
+            return tf.train.ProximalAdagradOptimizer(params['lr']) 
+        elif name is 'proximal_gradient_descent':
+            return tf.train.ProximalGradientDescentOptimizer(params['lr']) 
+        elif name is 'RMSProp':
+            return tf.train.RMSPropOptimizer(params['lr'], params['decay'], params['momentum'], params['epsilon'])
+            
+       
     def train(self, x_train, t_train,
               nb_epochs=1000,
               batch_size=10,
-              method=('adam', method_params)
-              seed=seed_nb):
+              method=('adam', {'lr':0.001, 'beta1':0.9, 'beta2':0.999, 'epsilon':1e-8}),
+              seed=3):
         
-        # TODO: Parseo del optimizador
-        # optimizer = tf.train.AdamOptimizer(0.01, name='optimizer')
-        # self.train_step = optimizer.minimize(self.loss, name='train_step')
+        optimizer = parsea_optimizador(method)
+        self.train_step = optimizer.minimize(self.loss, name='train_step')
 
         nb_data = x_train.shape[0]
         index_list = np.arange(nb_data)
@@ -196,7 +216,7 @@ En las restantes capas, la estructura será la siguiente:
 layer_k = {'type': layer_type, # tipo de capa: 'fc', 'conv', 'maxpool', 'dropout', 'LRN', ...
            'dim': (dim_0, ..., dim_L) # dimensiones de la salida
                                       # de la capa (en su caso)
-           'kernel_size': size # por ejemplo, (3, 3) en una máscara convolucional 3 x 3
+           'kernel_size': size # por ejemplo, (3, 3) en una máscara convolucional 3 x 3  // kerner_size - conv    ksize - maxpool
            'stride': stride # por ejemplo, (1, 1) si se hace stride 1 horizontal y 1 vertical
            'init': init_method # método de inicialización de pesos y biases, por ejemplo
                                # ('truncated_normal', stddev, 'zeros'), 'xavier' o 'he'
@@ -205,6 +225,9 @@ layer_k = {'type': layer_type, # tipo de capa: 'fc', 'conv', 'maxpool', 'dropout
                                      # 'sigmoid', 'tanh', 'relu', 'identity', ...
            'prob': probability, # float, probabilidad usada en dropout
            'LRN_params': (k, alpha, beta, r)}
+           
+           
+         AÑADIMOS CAMPO CHANNELS
 
 
 El método train entrenará la red, recibiendo los datos de entrenamiento,
