@@ -344,6 +344,7 @@ class MLP(object):
 
         """
         x = np.maximum(y, 10**-15)
+        x = np.minimum(x, 1 - 10**-15)
         return -np.sum(t_data * np.log(x) + (1 - t_data) * np.log(1 - x))
 
     @staticmethod
