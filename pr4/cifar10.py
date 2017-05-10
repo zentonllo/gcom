@@ -12,6 +12,16 @@ import net_constructor
 reload(net_constructor)
 from net_constructor import NetConstructor
 
+"""
+
+Suponemos que las últimas capas son fully connected y que la última capa es una fully connected donde el campo dimensión indica el número
+de clases de salida
+
+Suponemos que los campos dim son: o números (para redes fully connected, indicando el número de neuronas en esa capa) o tuplas de 3 elementos (height, width, channels)
+
+
+"""
+
 
 def maybe_download_and_extract():
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
@@ -82,7 +92,6 @@ if __name__ == '__main__':
 
     layer_dict[3] = {'type': 'LRN',
                      'k': 1.0,
-                     'r': 4,
                      'alpha': 0.001 / 9.0,
                      'beta': 0.75}
 
@@ -94,7 +103,7 @@ if __name__ == '__main__':
                      'activation': 'relu'}
 
     layer_dict[5] = {'type': 'LRN',
-                     'r': 4,
+                     'k': 4.0,
                      'alpha': 0.001 / 9.0,
                      'beta': 0.75}
 

@@ -36,7 +36,7 @@ class NetConstructor(object):
                                  'tanh': tf.nn.tanh,
                                  'identity': tf.identity}
         self.loss_dict = {'softmax': tf.nn.softmax_cross_entropy_with_logits,
-                          'identity': tf.nn.l2_loss,
+                          #'identity': tf.nn.l2_loss,
                           'sigmoid': tf.nn.sigmoid_cross_entropy_with_logits}
                              
         
@@ -47,16 +47,22 @@ class NetConstructor(object):
     # Fully-connected layer
     def fc_layer(self, unit, layer_info):
         
+        # Hacer reshape 
+        dim1 = int(unit.get_shape()[1])
+        dim2 = int(unit.get_shape()[2])
+        dim3 = int(unit.get_shape()[3])
+        unit_2 = tf.reshape(unit, shape=[-1, dim1*dim2*dim3 ])        
+        
         dim = layer_info['dim']
         
         activation_fn = layer_info['activation']
 
         with tf.name_scope('fc_layer'):
-            w_shape = (int(unit.get_shape()[1]), dim)
+            w_shape = (int(unit_2.get_shape()[1]), dim)
             # Habría que usar el 'init' del diccionario?
             w = tf.Variable(tf.truncated_normal(w_shape), name='weights')
             b = tf.Variable(tf.zeros(dim), name='bias')
-            a = tf.add(tf.matmul(unit, w), b, name='activation') #arregladlo
+            a = tf.add(tf.matmul(unit_2, w), b, name='activation') #arregladlo
             z = None
             if activation_fn in self.activations_dict:
                 h = self.activations_dict[activation_fn]
@@ -64,7 +70,7 @@ class NetConstructor(object):
             else:
                	h = self.loss_dict[activation_fn]
                	self.logits = a
-               	z = h(logits=z, labels=self.y)
+               	z = h(logits=self.logits, labels=self.y)
                	self.output = z
             return z
             
@@ -77,6 +83,8 @@ class NetConstructor(object):
         
     #Conv
     def conv_layer(self, unit, layer_info):
+        
+        
         hor_stride, ver_stride = layer_info['stride']
         k1, k2 = layer_info['kernel_size']
         padding = layer_info['padding']
@@ -97,7 +105,10 @@ class NetConstructor(object):
     
     #LRN
     def LRN_layer(self, unit, layer_info):
-        k, alpha, beta, r = layer_info['LRN_params'] 
+        k = layer_info['k']
+        alpha = layer_info['alpha']
+        beta = layer_info['beta']
+        r = layer_info['r']
         return tf.nn.local_response_normalization(input=unit, depth_radius=r, bias=k, alpha=alpha, beta=beta, name='LRN_layer')
     
     def create_net(self):
@@ -107,10 +118,10 @@ class NetConstructor(object):
         if type(nb_input) is not tuple:
             nb_input = (nb_input,)
         
-        nb_ouput = self.layers[-1]['dim']
+        nb_output = self.layers[-1]['dim']
         
         self.X = tf.placeholder(tf.float32, shape=(None,)+nb_input, name='X')
-        self.y = tf.placeholder(tf.float32, shape=(None, nb_ouput), name='y')
+        self.y = tf.placeholder(tf.float32, shape=(None, nb_output), name='y')
         nb_layers = len(self.layers)
         Z = self.X
         for layer in range(1, nb_layers):
@@ -151,7 +162,7 @@ class NetConstructor(object):
               method=('adam', {'lr':0.001, 'beta1':0.9, 'beta2':0.999, 'epsilon':1e-8}),
               seed=3):
         
-        optimizer = parsea_optimizador(method)
+        optimizer = self.parsea_optimizador(method)
         self.train_step = optimizer.minimize(self.loss, name='train_step')
 
         nb_data = x_train.shape[0]
