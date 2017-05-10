@@ -90,9 +90,15 @@ class NetConstructor(object):
         padding = layer_info['padding']
         in_channels = int(unit.get_shape()[3])
         out_channels = layer_info['channels']
-        return tf.nn.conv2d(input=unit, filter=[k1,k2,in_channels,out_channels], 
-                            strides=[1,ver_stride,hor_stride, 1], 
-                            padding=padding, name='conv_layer') 
+        activation_fn = layer_info['activation']
+
+        with tf.name_scope('conv_layer'):
+            
+            weights = tf.Variable(tf.random_normal([k1, k2, in_channels, out_channels]))
+            biases = tf.Variable(tf.zeros([out_channels]))
+            x = tf.nn.conv2d(unit, weights, strides=[1, ver_stride, hor_stride, 1], padding = padding)
+            x = tf.nn.bias_add(x, biases)
+            return self.activations_dict[activation_fn](x) #hacer lo mismo que en fc_layer?
     
     #Maxpool
     # el stride y el kernel_size deberían ser iguales?
@@ -191,7 +197,7 @@ class NetConstructor(object):
         with tf.Session() as sess:
             self.saver.restore(sess, LOG_DIR)
             pred = tf.nn.softmax(self.logits)
-            y_pred = sess.run(pred, feed_dict={self.x: x_test})
+            y_pred = sess.run(pred, feed_dict={self.X: x_test})
         return y_pred
 
 

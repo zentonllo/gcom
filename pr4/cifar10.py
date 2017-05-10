@@ -144,6 +144,6 @@ if __name__ == '__main__':
     pred_classes = np.argmax(pred, axis=1)
 
 
-    nb_good_pred = np.sum(np.equal(true_classes, classes))
+    nb_good_pred = np.sum(np.equal(true_classes, pred_classes))
 
     print(nb_good_pred / 10000) # aprox 0.66 %
