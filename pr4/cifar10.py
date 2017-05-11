@@ -1,36 +1,26 @@
-import os
-import cPickle
+# coding: utf-8
 
+from __future__ import division, print_function
 
+import pickle
 import numpy as np
-import matplotlib.pyplot as plt
-
-import download
-reload(download)
+import download 
+from importlib import reload
 
 import net_constructor
 reload(net_constructor)
 from net_constructor import NetConstructor
-
-"""
-
-Suponemos que las últimas capas son fully connected y que la última capa es una fully connected donde el campo dimensión indica el número
-de clases de salida
-
-Suponemos que los campos dim son: o números (para redes fully connected, indicando el número de neuronas en esa capa) o tuplas de 3 elementos (height, width, channels)
-
-
-"""
 
 
 def maybe_download_and_extract():
     url = 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz'
     download.maybe_download_and_extract(url, '.')
 
+    
 def process_data(file_name):
 
     with open(file_name, 'rb') as file:
-        dict_data = cPickle.load(file)
+        dict_data = pickle.load(file, encoding = 'latin1')
 
     x_data = dict_data['data']
     t_data = dict_data['labels']
@@ -70,80 +60,109 @@ if __name__ == '__main__':
     maybe_download_and_extract()
     x_data, x_test, t_data, t_test = get_data()
 
-    x_data_mean = np.mean(x_data, axis=0)
+    layer_list = []
 
-    x_data = (x_data - x_data_mean) / 255
+    layer =  {'dim': (32, 32, 3)}
+    layer_list.append(layer)
 
-    layer_dict = dict()
+    layer = {'type': 'conv',
+             'channels': 64,
+             'k_size': (5, 5),
+             'strides': (1, 1),
+             'padding': 'SAME',
+             'activation': 'relu',
+             'init_w': 'truncated_normal',
+             'stddev_w': 1.0,
+             'init_b': 'zeros'}
+    layer_list.append(layer)
 
-    layer_dict[0] = {'dim': (32, 32, 3)}
+    layer = {'type': 'maxpool',
+             'k_size': (3, 3),
+             'strides': (2, 2),
+             'padding': 'SAME'}
+    layer_list.append(layer)
 
-    layer_dict[1] = {'type': 'conv',
-                     'channels': 64,
-                     'kernel_size': (5, 5),
-                     'stride': (1, 1),
-                     'padding': 'SAME',
-                     'activation': 'relu'}
+    layer = {'type': 'LRN',
+             'r': 4,
+             'k': 1.0,
+             'alpha': 0.001 / 9.0,
+             'beta': 0.75}
+    layer_list.append(layer)
 
-    layer_dict[2] = {'type': 'maxpool',
-                     'ksize': (3, 3),
-                     'strides': (2, 2),
-                     'padding': 'SAME'}
+    layer = {'type': 'conv',
+             'channels': 64,
+             'k_size': (5, 5),
+             'strides': (1, 1),
+             'padding': 'SAME',
+             'activation': 'relu',
+             'init_w': 'truncated_normal',
+             'stddev_w': 1.0,
+             'init_b': 'zeros'}
+    layer_list.append(layer)
 
-    layer_dict[3] = {'type': 'LRN',
-                     'k': 1.0,
-                     'alpha': 0.001 / 9.0,
-                     'beta': 0.75}
+    layer = {'type': 'LRN',
+             'r': 4,
+             'k': 1.0,
+             'alpha': 0.001 / 9.0,
+             'beta': 0.75}
+    layer_list.append(layer)
 
-    layer_dict[4] = {'type': 'conv',
-                     'channels': 64,
-                     'kernel_size': (5, 5),
-                     'stride': (1, 1),
-                     'padding': 'SAME',
-                     'activation': 'relu'}
+    layer = {'type': 'maxpool',
+             'k_size': (3, 3),
+             'strides': (2, 2),
+             'padding': 'SAME'}
+    layer_list.append(layer)
 
-    layer_dict[5] = {'type': 'LRN',
-                     'k': 4.0,
-                     'alpha': 0.001 / 9.0,
-                     'beta': 0.75}
+    layer = {'type': 'fc',
+             'dim': 384,
+             'activation': 'relu',
+             'init_w': 'truncated_normal',
+             'stddev_w': 1.0,
+             'init_b': 'zeros'}
+    layer_list.append(layer)
 
+    layer = {'type': 'fc',
+             'dim': 192,
+             'activation': 'relu',
+             'init_w': 'truncated_normal',
+             'stddev_w': 1.0,
+             'init_b': 'zeros'}
+    layer_list.append(layer)
 
-    layer_dict[6] = {'type': 'maxpool',
-                     'ksize': (3, 3),
-                     'strides': (2, 2),
-                     'padding': 'SAME'}
-
- 
-    layer_dict[7] = {'type': 'fc',
-                     'dim': 384,
-                     'activation': 'relu'}
-
-    layer_dict[8] = {'type': 'fc',
-                     'dim': 192,
-                     'activation': 'relu'}
-
-    layer_dict[9] = {'type': 'fc',
-                     'dim': 10,
-                     'activation': 'softmax'}
-
-    nb_layers = len(layer_dict.keys())
-    layer_list = [layer_dict[k] for k in range(nb_layers)]
+    layer = {'type': 'fc',
+             'dim': 10,
+             'activation': 'softmax',
+             'init_w': 'truncated_normal',
+             'stddev_w': 1.0,
+             'init_b': 'zeros'}
+    layer_list.append(layer)
 
     nnet = NetConstructor(layer_list)
 
-    TRAIN = False
+    TRAIN = True
     if TRAIN:
         nnet.train(x_data, t_data,
-                   method=('adam', {'eta': 0.001}),
-                   nb_epochs=1000,
+                   method=('adam', {'eta': 0.001,
+                                    'beta_1': 0.9,
+                                    'beta_2': 0.999,
+                                    'epsilon': 1e-8}),
+                   nb_epochs=350,
                    batch_size=128)
 
-    pred = nnet.predict((x_test - x_data_mean) / 255)
+    pred = nnet.predict(x_test)
 
     true_classes = np.argmax(t_test, axis=1)
     pred_classes = np.argmax(pred, axis=1)
 
 
     nb_good_pred = np.sum(np.equal(true_classes, pred_classes))
+    print(nb_good_pred / x_test.shape[0]) # aprox 0.64 %
 
-    print(nb_good_pred / 10000) # aprox 0.66 %
+    # sugerencias:
+    # - añadir más capas convolucionales
+    # - normalización de los datos o, mejor:
+    # - añadir capas de batch normalization (y posiblemente suprimir dropouts)
+    # - considerar mejores inicializaciones
+    # - considerar activaciones mejores que relu
+    # - implementar mejores métodos de parada (early stopping)
+    # - considerar otros tamaños de máscaras de convolución

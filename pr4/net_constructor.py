@@ -43,7 +43,7 @@ class NetConstructor(object):
     
     
     # Fully-connected layer
-    def fc_layer(self, inputs, layer_info):
+    def fc_layer2(self, inputs, layer_info):
         
         # Hacer reshape 
         inputs_dim = inputs.get_shape().as_list()
@@ -67,16 +67,30 @@ class NetConstructor(object):
             z = h(a, name='unit')
             return z
             
-    def fc_layer2(self, inputs, layer_info):
+    def fc_layer(self, inputs, layer_info):
 
-        return tf.layers.conv2d(inputs, layer_info['dim'], inputs.get_shape()[1:3] ) # weights_initializer, biases_initializer
-    
+        params = {}
+        params['inputs'] = inputs
+        params['units'] = layer_info['dim']#es un entero, segun las especificaciones
+        params['activation'] = self.activations_dict[layer_info['activation']]
+        init_w = layer_info['init_w']
+        if init_w is 'truncated_normal':
+            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
+        else:
+            params['kernel_initializer'] = tf.zeros_initializer()
+        init_b = layer_info['init_b']
+        if init_b is 'truncated_normal':
+            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
+        #sin else, ya es zeros por defecto
+
+        return tf.layers.dense(**params)
+
     #Dropout
     def dropout_layer(self, unit, layer_info):
         return tf.layers.dropout(unit, layer_info['prob']) #prob es la probabilidad de quitarlos, tal vez queramos usar 1-prob 
         
     #Conv
-    def conv_layer(self, unit, layer_info):
+    def conv_layer2(self, unit, layer_info):
         
         
         hor_stride, ver_stride = layer_info['stride']
@@ -94,20 +108,31 @@ class NetConstructor(object):
             x = tf.nn.bias_add(x, biases)
             return self.activations_dict[activation_fn](x)
     
-    def conv_layer2(self, inputs, layer_info):
+    def conv_layer(self, inputs, layer_info):
         
-        layer_info['inputs']=inputs
-        layer_info['filters'] = layer_info.pop('channels')
-        layer_info['kernel_size'] = layer_info.pop('k_size')
-        layer_info['strides'] = reversed(layer_info['strides'])
-        #padding y activation se llaman igual, faltan kernel_initializer y bias initializer
+        params = {}
+        params['inputs']=inputs
+        params['filters'] = layer_info['channels']
+        params['kernel_size'] = layer_info['k_size']
+        params['strides'] = reversed(layer_info['strides'])
+        params['padding'] = layer_info['padding']
+        params['activation'] = self.activations_dict[layer_info['activation']]
+        init_w = layer_info['init_w']
+        if init_w is 'truncated_normal':
+            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
+        else:
+            params['kernel_initializer'] = tf.zeros_initializer()
+        init_b = layer_info['init_b']
+        if init_b is 'truncated_normal':
+            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
+        #sin else, ya es zeros por defecto
 
-        return tf.layers.conv2d(**layer_info)
+        return tf.layers.conv2d(**params)
 
     #Maxpool
     # el stride y el kernel_size deberían ser iguales?  Respuesta: si acepta padding no necesariamente
     def maxpool_layer(self, inputs, layer_info):
-        return tf.layers.max_pooling2d(inputs, layer_info['ksize'], layer_info['strides'], padding = layer_info['padding'])
+        return tf.layers.max_pooling2d(inputs, layer_info['k_size'], layer_info['strides'], padding = layer_info['padding'])
     
     
     #LRN
@@ -161,24 +186,27 @@ class NetConstructor(object):
                         'adam' : tf.train.AdamOptimizer}
 
 
-        params['learning_rate'] = params.pop('eta') #comun a todos
+        kwargs = {}
+        kwargs['learning_rate'] = params['eta']
 
         if name is 'momentum':
-            params['momentum'] = params.pop('gamma')
+            kwargs['momentum'] = params['gamma']
         elif name is 'nesterov':
-            params['momentum'] = params.pop('gamma')
-            params['use_nesterov'] = True
-        elif name is 'adagrad':
-            if 'epsilon' in params:
-                del params['epsilon'] #el adagrad de tensorflow no acepta epsilon
+            kwargs['momentum'] = params['gamma']
+            kwargs['use_nesterov'] = True
         elif name is 'adadelta':
-            params['rho'] = params.pop('gamma')
+            kwargs['rho'] = params['gamma']
+            kwargs['epsilon'] = params['epsilon']
         elif name is 'RMSprop':
-            params['decay'] = params.pop('gamma')
-        #beta1, beta2 y epsilon se llaman igual
+            kwargs['decay'] = params['gamma']
+            kwargs['epsilon'] = params['epsilon']
+        elif name is 'adam':
+            kwargs['beta1'] = params['beta_1']
+            kwargs['beta2'] = params['beta_2']
+            kwargs['epsilon'] = params['epsilon']
 
 
-        return dict_methods[name](**params)
+        return dict_methods[name](**kwargs)
 
        
     def train(self, x_train, t_train,
@@ -196,7 +224,7 @@ class NetConstructor(object):
 
         self.init = tf.global_variables_initializer() #algunos optimizadores tienen variables globales, como adam
         with tf.Session() as sess:
-            self.sess.run(self.init)
+            sess.run(self.init)
             for epoch in range(nb_epochs):
                 np.random.shuffle(index_list)
                 for batch in range(nb_batches):
@@ -204,10 +232,10 @@ class NetConstructor(object):
                                            (batch + 1) * batch_size]
                     x_batch = x_train[batch_indices, :]
                     t_batch = t_train[batch_indices, :]
-                    self.sess.run(self.train_step,
+                    sess.run(self.train_step,
                          feed_dict={self.X: x_batch,
                                     self.t: t_batch})
-                cost = self.sess.run(self.loss, feed_dict={self.X: x_train,
+                cost = sess.run(self.loss, feed_dict={self.X: x_train,
                                                   self.t: t_train})
                 sys.stdout.write('cost=%f %d\r' % (cost, epoch))
                 sys.stdout.flush()
@@ -216,7 +244,7 @@ class NetConstructor(object):
     def predict(self, x_test):
         with tf.Session() as sess:
             self.saver.restore(sess, "./MLP.ckpt")
-            y_pred = self.sess.run(self.y, feed_dict={self.X: x_test})
+            y_pred = sess.run(self.y, feed_dict={self.X: x_test})
         return y_pred
 
 
