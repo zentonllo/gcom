@@ -41,36 +41,19 @@ class NetConstructor(object):
         self.create_net()
 
     
-    
-    # Fully-connected layer
-    def fc_layer2(self, inputs, layer_info):
-        
-        # Hacer reshape 
-        inputs_dim = inputs.get_shape().as_list()
-        if len(inputs_dim) == 4:
-            prod = inputs_dim[1]*inputs_dim[2]*inputs_dim[3]
-            inputs = tf.reshape(inputs, [-1, prod])
-        
-        dim1 = inputs.get_shape().as_list()[1]
-        dim2 = layer_info['dim']
-        
-        activation_fn = layer_info['activation']
-
-        with tf.name_scope('fc_layer'):
-            w_shape = [dim1, dim2]
-            # Habría que usar el 'init' del diccionario?
-            w = tf.Variable(tf.truncated_normal(w_shape), name='weights')
-            b = tf.Variable(tf.zeros(dim2), name='bias')
-            p = tf.matmul(inputs, w)
-            a = tf.add(p, b, name='activation')
-            h = self.activations_dict[activation_fn]
-            z = h(a, name='unit')
-            return z
-            
+             
     def fc_layer(self, inputs, layer_info):
 
+
+        inputs_dim = inputs.get_shape().as_list()
+        if len(inputs_dim) is 2:
+            inputs_flat = inputs
+        else:
+            inputs_flat = tf.reshape(inputs, [-1, np.prod(inputs_dim[1:])])
+
+
         params = {}
-        params['inputs'] = inputs
+        params['inputs'] = inputs_flat
         params['units'] = layer_info['dim']#es un entero, segun las especificaciones
         params['activation'] = self.activations_dict[layer_info['activation']]
         init_w = layer_info['init_w']
@@ -89,24 +72,6 @@ class NetConstructor(object):
     def dropout_layer(self, unit, layer_info):
         return tf.layers.dropout(unit, layer_info['prob']) #prob es la probabilidad de quitarlos, tal vez queramos usar 1-prob 
         
-    #Conv
-    def conv_layer2(self, unit, layer_info):
-        
-        
-        hor_stride, ver_stride = layer_info['stride']
-        k1, k2 = layer_info['kernel_size']
-        padding = layer_info['padding']
-        in_channels = int(unit.get_shape()[3])
-        out_channels = layer_info['channels']
-        activation_fn = layer_info['activation']
-
-        with tf.name_scope('conv_layer'):
-            
-            weights = tf.Variable(tf.random_normal([k1, k2, in_channels, out_channels]))
-            biases = tf.Variable(tf.zeros([out_channels]))
-            x = tf.nn.conv2d(unit, weights, strides=[1, ver_stride, hor_stride, 1], padding = padding)
-            x = tf.nn.bias_add(x, biases)
-            return self.activations_dict[activation_fn](x)
     
     def conv_layer(self, inputs, layer_info):
         
