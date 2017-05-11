@@ -21,8 +21,6 @@ class NetConstructor(object):
     def __init__(self, layers):
         tf.reset_default_graph()
         self.file_writer = None
-        self.logits = None
-        self.output = None
         self.train_step = None
         self.layers  = layers
         self.layers_dict = { 'fc': self.fc_layer,
@@ -34,9 +32,10 @@ class NetConstructor(object):
         self.activations_dict = {'relu': tf.nn.relu,
                                  'sigmoid': tf.nn.sigmoid,
                                  'tanh': tf.nn.tanh,
-                                 'identity': tf.identity}
+                                 'identity': tf.identity,
+				 'softmax': tf.nn.softmax} #por defecto lo hace en la dimension correcta, creo
         self.loss_dict = {'softmax': tf.nn.softmax_cross_entropy_with_logits,
-                          #'identity': tf.nn.l2_loss,
+                          'identity': tf.nn.l2_loss,
                           'sigmoid': tf.nn.sigmoid_cross_entropy_with_logits}
                              
         
@@ -45,13 +44,12 @@ class NetConstructor(object):
     
     
     # Fully-connected layer
-    def fc_layer(self, unit, layer_info):
+    def fc_layer(self, inputs, layer_info):
         
         # Hacer reshape 
-        dim1 = int(unit.get_shape()[1])
-        dim2 = int(unit.get_shape()[2])
-        dim3 = int(unit.get_shape()[3])
-        unit_2 = tf.reshape(unit, shape=[-1, dim1*dim2*dim3 ])        
+        input_dim = inputs.get_shape()
+        if len(input_dim) == 4:
+            inputs = tf.reshape(inputs, shape=[input_dim[0], input_dim[1]*input_dim[2]*input_dim[3]])
         
         dim = layer_info['dim']
         
@@ -64,22 +62,17 @@ class NetConstructor(object):
             b = tf.Variable(tf.zeros(dim), name='bias')
             a = tf.add(tf.matmul(unit_2, w), b, name='activation') #arregladlo
             z = None
-            if activation_fn in self.activations_dict:
-                h = self.activations_dict[activation_fn]
-                z = h(a, name='unit')
-            else:
-               	h = self.loss_dict[activation_fn]
-               	self.logits = a
-               	z = h(logits=self.logits, labels=self.y)
-               	self.output = z
+            h = self.activations_dict[activation_fn]
+            z = h(a, name='unit')
             return z
             
+    def fc_layer2(self, inputs, layer_info):
+
+        return tf.layers.conv2d(inputs, layer_info['dim'], inputs.get_shape()[1:3] ) # weights_initializer, biases_initializer
     
     #Dropout
     def dropout_layer(self, unit, layer_info):
-        keep_prob = layer_info['prob']
-        return tf.nn.dropout(unit, keep_prob)   
-        
+        return tf.layers.dropout(unit, layer_info['prob']) #prob es la probabilidad de quitarlos, tal vez queramos usar 1-prob 
         
     #Conv
     def conv_layer(self, unit, layer_info):
@@ -98,24 +91,34 @@ class NetConstructor(object):
             biases = tf.Variable(tf.zeros([out_channels]))
             x = tf.nn.conv2d(unit, weights, strides=[1, ver_stride, hor_stride, 1], padding = padding)
             x = tf.nn.bias_add(x, biases)
-            return self.activations_dict[activation_fn](x) #hacer lo mismo que en fc_layer?
+            return self.activations_dict[activation_fn](x)
     
+    def conv_layer2(self, inputs, layer_info):
+        
+        layer_info['inputs']=inputs
+        layer_info['filters'] = layer_info.pop('channels')
+        layer_info['kernel_size'] = layer_info.pop('k_size')
+        layer_info['strides'] = reversed(layer_info['strides'])
+        #padding y activation se llaman igual, faltan kernel_initializer y bias initializer
+
+        return tf.layers.conv2d(**layer_info)
+
     #Maxpool
-    # el stride y el kernel_size deberían ser iguales?
-    def maxpool_layer(self, unit, layer_info):
-        ver_stride, hor_stride = layer_info['stride']
-        k1, k2 = layer_info['ksize']
-        padding = layer_info['padding']
-        return tf.nn.max_pool(value=unit, ksize=[1,k1,k2,1], strides=[1,ver_stride,hor_stride, 1], padding=padding)    
+    # el stride y el kernel_size deberían ser iguales?  Respuesta: si acepta padding no necesariamente
+    def maxpool_layer(self, inputs, layer_info):
+        return tf.layers.max_pooling2d(inputs, layer_info['ksize'], layer_info['strides'], padding = layer_info['padding'])
     
     
     #LRN
-    def LRN_layer(self, unit, layer_info):
+    def LRN_layer(self, inputs, layer_info):
+        """
         k = layer_info['k']
         alpha = layer_info['alpha']
         beta = layer_info['beta']
         r = layer_info['r']
         return tf.nn.local_response_normalization(input=unit, depth_radius=r, bias=k, alpha=alpha, beta=beta, name='LRN_layer')
+        """
+        return inputs
     
     def create_net(self):
         
@@ -124,17 +127,20 @@ class NetConstructor(object):
         if type(nb_input) is not tuple:
             nb_input = (nb_input,)
         
-        nb_output = self.layers[-1]['dim']
+        nb_output = self.layers[-1]['dim'] #asumimos que la salida tiene dimension 1 (es decir (N,1))
         
-        self.X = tf.placeholder(tf.float32, shape=(None,)+nb_input, name='X')
-        self.y = tf.placeholder(tf.float32, shape=(None, nb_output), name='y')
-        nb_layers = len(self.layers)
+        self.X = tf.placeholder(tf.float32, shape=(None,)+nb_input, name='X') #x_data
+        self.t = tf.placeholder(tf.float32, shape=(None, nb_output), name='t')#t_data
+
         Z = self.X
-        for layer in range(1, nb_layers):
-            layer_type = self.layers[layer]['type']
-            Z  = self.layers_dict[layer_type](Z, self.layers[layer])
+        for layer in self.layers[1:]:
+            layer_type = layer.pop('type')
+            Z  = self.layers_dict[layer_type](Z, layer)
+        self.y = Z
         
-        self.loss = tf.reduce_mean(self.output,name='loss')
+        with tf.name_scope('loss'):	#Suponemos por ahora que la última capa es fc
+            loss_fn = self.loss_dict[self.activation_functions[-1]]
+            self.loss = tf.reduce_mean(loss_fn(logits=self.y, labels=self.t), name='loss')
 
         self.init = tf.global_variables_initializer()
 
@@ -143,29 +149,42 @@ class NetConstructor(object):
                 
     @staticmethod
     def parsea_optimizador(method):
+
         name, params = method
-        if name is 'adam':
-            return tf.train.AdamOptimizer(params['lr'], params['beta1'], params['beta2'], params['epsilon'])
-        elif name is 'adadelta':
-            return tf.train.AdadeltaOptimizer(params['lr'], params['rho'], params['epsilon'])
+
+        dict_methods = {'SGD': tf.train.GradientDescentOptimizer,
+                        'momentum' : tf.train.MomentumOptimizer,
+                        'nesterov' : tf.train.MomentumOptimizer,
+                        'adagrad' : tf.train.AdagradOptimizer,
+                        'adadelta' : tf.train.AdadeltaOptimizer,
+                        'RMSProp' : tf.train.RMSPropOptimizer,
+                        'adam' : tf.train.AdamOptimizer}
+
+
+        params['learning_rate'] = params.pop('eta') #comun a todos
+
+        if name is 'momentum':
+            params['momentum'] = params.pop('gamma')
+        elif name is 'nesterov':
+            params['momentum'] = params.pop('gamma')
+            params['use_nesterov'] = True
         elif name is 'adagrad':
-            return tf.train.AdagradOptimizer(params['lr'], params['initial_accumulator'])
-        elif name is 'gradient_descent':
-            return tf.train.GradientDescentOptimizer(params['lr'])
-        elif name is 'momentum':
-            return tf.train.MomentumOptimizer(params['lr'], params['momentum_value'])
-        elif name is 'proximal_adagrad':
-            return tf.train.ProximalAdagradOptimizer(params['lr']) 
-        elif name is 'proximal_gradient_descent':
-            return tf.train.ProximalGradientDescentOptimizer(params['lr']) 
-        elif name is 'RMSProp':
-            return tf.train.RMSPropOptimizer(params['lr'], params['decay'], params['momentum'], params['epsilon'])
-            
+            if 'epsilon' in params:
+                del params['epsilon'] #el adagrad de tensorflow no acepta epsilon
+        elif name is 'adadelta':
+            params['rho'] = params.pop('gamma')
+        elif name is 'RMSprop':
+            params['decay'] = params.pop('gamma')
+        #beta1, beta2 y epsilon se llaman igual
+
+
+        return dict_methods[name](**params)
+
        
     def train(self, x_train, t_train,
               nb_epochs=1000,
               batch_size=10,
-              method=('adam', {'lr':0.001, 'beta1':0.9, 'beta2':0.999, 'epsilon':1e-8}),
+              method=('adam', {'eta':0.001, 'beta1':0.9, 'beta2':0.999, 'epsilon':1e-8}),
               seed=3):
         
         optimizer = self.parsea_optimizador(method)
@@ -173,7 +192,7 @@ class NetConstructor(object):
 
         nb_data = x_train.shape[0]
         index_list = np.arange(nb_data)
-        nb_batches = nb_data // batch_size
+        nb_batches = nb_data // batch_size #que diferencia hay entre / y //?
 
         with tf.Session() as sess:
             sess.run(self.init)
@@ -186,9 +205,9 @@ class NetConstructor(object):
                     t_batch = t_train[batch_indices, :]
                     sess.run(self.train_step,
                              feed_dict={self.X: x_batch,
-                                        self.y: t_batch})
+                                        self.t: t_batch})
                 cost = sess.run(self.loss, feed_dict={self.X: x_train,
-                                                      self.y: t_train})
+                                                      self.t: t_train})
                 sys.stdout.write('cost=%f %d\r' % (cost, epoch))
                 sys.stdout.flush()
             self.saver.save(sess, LOG_DIR)
@@ -196,14 +215,25 @@ class NetConstructor(object):
     def predict(self, x_test):
         with tf.Session() as sess:
             self.saver.restore(sess, LOG_DIR)
-            pred = tf.nn.softmax(self.logits)
-            y_pred = sess.run(pred, feed_dict={self.X: x_test})
+            y_pred = sess.run(self.y, feed_dict={self.X: x_test})
         return y_pred
 
 
 """
 
-        
+
+
+No esta claro en strides y ksize que componente es la vertical y cual es la horizontal.
+Como normalmente son cuadradas no importa demasiado, pero puede que lo tengamos al reves
+
+
+
+
+
+
+
+
+
 
 
 
