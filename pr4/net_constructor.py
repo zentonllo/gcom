@@ -12,9 +12,9 @@ import numpy as np
 import sys
 from datetime import datetime
 
-NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-ROOT_LOGDIR = 'tf_logs'
-LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
+#NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+#ROOT_LOGDIR = 'tf_logs'
+#LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
 
 
 class NetConstructor(object):
@@ -47,21 +47,23 @@ class NetConstructor(object):
     def fc_layer(self, inputs, layer_info):
         
         # Hacer reshape 
-        input_dim = inputs.get_shape()
-        if len(input_dim) == 4:
-            inputs = tf.reshape(inputs, shape=[input_dim[0], input_dim[1]*input_dim[2]*input_dim[3]])
+        inputs_dim = inputs.get_shape().as_list()
+        if len(inputs_dim) == 4:
+            prod = inputs_dim[1]*inputs_dim[2]*inputs_dim[3]
+            inputs = tf.reshape(inputs, [-1, prod])
         
-        dim = layer_info['dim']
+        dim1 = inputs.get_shape().as_list()[1]
+        dim2 = layer_info['dim']
         
         activation_fn = layer_info['activation']
 
         with tf.name_scope('fc_layer'):
-            w_shape = (int(unit_2.get_shape()[1]), dim)
+            w_shape = [dim1, dim2]
             # Habría que usar el 'init' del diccionario?
             w = tf.Variable(tf.truncated_normal(w_shape), name='weights')
-            b = tf.Variable(tf.zeros(dim), name='bias')
-            a = tf.add(tf.matmul(unit_2, w), b, name='activation') #arregladlo
-            z = None
+            b = tf.Variable(tf.zeros(dim2), name='bias')
+            p = tf.matmul(inputs, w)
+            a = tf.add(p, b, name='activation')
             h = self.activations_dict[activation_fn]
             z = h(a, name='unit')
             return z
@@ -122,15 +124,14 @@ class NetConstructor(object):
     
     def create_net(self):
         
-        #  Parseo de dimensiones (cuando es convolucional se pone tupla, cuando es fc se pone número sin tupla)
-        nb_input = self.layers[0]['dim']
-        if type(nb_input) is not tuple:
-            nb_input = (nb_input,)
+        #En las especificaciones pone que la dimension inicial debe ser una tupla, aunque luego pone
+		#(784) en vez de (784,) como ejemplo de dimension 1. Nosotros asumiremos que es una tupla
+        dim_input = self.layers[0]['dim']
         
-        nb_output = self.layers[-1]['dim'] #asumimos que la salida tiene dimension 1 (es decir (N,1))
+        dim_output = (self.layers[-1]['dim'],) #asumimos que la salida tiene dimension 1 (es decir (N,1))
         
-        self.X = tf.placeholder(tf.float32, shape=(None,)+nb_input, name='X') #x_data
-        self.t = tf.placeholder(tf.float32, shape=(None, nb_output), name='t')#t_data
+        self.X = tf.placeholder(tf.float32, shape=(None,)+dim_input, name='X') #x_data
+        self.t = tf.placeholder(tf.float32, shape=(None,)+dim_output, name='t')#t_data
 
         Z = self.X
         for layer in self.layers[1:]:
@@ -139,13 +140,13 @@ class NetConstructor(object):
         self.y = Z
         
         with tf.name_scope('loss'):	#Suponemos por ahora que la última capa es fc
-            loss_fn = self.loss_dict[self.activation_functions[-1]]
+            loss_fn = self.loss_dict[self.layers[-1]['activation']]
             self.loss = tf.reduce_mean(loss_fn(logits=self.y, labels=self.t), name='loss')
 
         self.init = tf.global_variables_initializer()
 
         self.saver = tf.train.Saver()
-        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
+#        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
                 
     @staticmethod
     def parsea_optimizador(method):
@@ -194,28 +195,30 @@ class NetConstructor(object):
         index_list = np.arange(nb_data)
         nb_batches = nb_data // batch_size #que diferencia hay entre / y //?
 
-        with tf.Session() as sess:
-            sess.run(self.init)
-            for epoch in range(nb_epochs):
-                np.random.shuffle(index_list)
-                for batch in range(nb_batches):
-                    batch_indices = index_list[batch * batch_size:
-                                               (batch + 1) * batch_size]
-                    x_batch = x_train[batch_indices, :]
-                    t_batch = t_train[batch_indices, :]
-                    sess.run(self.train_step,
-                             feed_dict={self.X: x_batch,
-                                        self.t: t_batch})
-                cost = sess.run(self.loss, feed_dict={self.X: x_train,
-                                                      self.t: t_train})
-                sys.stdout.write('cost=%f %d\r' % (cost, epoch))
-                sys.stdout.flush()
-            self.saver.save(sess, LOG_DIR)
+        self.init = tf.global_variables_initializer() #algunos optimizadores tienen variables globales, como adam
+        self.sess = tf.Session()
+        self.sess.run(self.init)
+        for epoch in range(nb_epochs):
+            np.random.shuffle(index_list)
+            for batch in range(nb_batches):
+                batch_indices = index_list[batch * batch_size:
+                                           (batch + 1) * batch_size]
+                x_batch = x_train[batch_indices, :]
+                t_batch = t_train[batch_indices, :]
+                self.sess.run(self.train_step,
+                         feed_dict={self.X: x_batch,
+                                    self.t: t_batch})
+            cost = self.sess.run(self.loss, feed_dict={self.X: x_train,
+                                                  self.t: t_train})
+            sys.stdout.write('cost=%f %d\r' % (cost, epoch))
+            sys.stdout.flush()
+#            self.saver.save(sess, LOG_DIR)
 
     def predict(self, x_test):
         with tf.Session() as sess:
-            self.saver.restore(sess, LOG_DIR)
-            y_pred = sess.run(self.y, feed_dict={self.X: x_test})
+            #sess.run(self.init)
+#            self.saver.restore(sess, LOG_DIR)
+            y_pred = self.sess.run(self.y, feed_dict={self.X: x_test})
         return y_pred
 
 
