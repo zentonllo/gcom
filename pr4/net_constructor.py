@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Apr 26 10:40:14 2017
 
@@ -12,9 +11,9 @@ import numpy as np
 import sys
 from datetime import datetime
 
-#NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-#ROOT_LOGDIR = 'tf_logs'
-#LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
+NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+ROOT_LOGDIR = 'tf_logs'
+LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
 
 
 class NetConstructor(object):
@@ -146,7 +145,7 @@ class NetConstructor(object):
         self.init = tf.global_variables_initializer()
 
         self.saver = tf.train.Saver()
-#        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
+        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
                 
     @staticmethod
     def parsea_optimizador(method):
@@ -196,28 +195,27 @@ class NetConstructor(object):
         nb_batches = nb_data // batch_size #que diferencia hay entre / y //?
 
         self.init = tf.global_variables_initializer() #algunos optimizadores tienen variables globales, como adam
-        self.sess = tf.Session()
-        self.sess.run(self.init)
-        for epoch in range(nb_epochs):
-            np.random.shuffle(index_list)
-            for batch in range(nb_batches):
-                batch_indices = index_list[batch * batch_size:
+        with tf.Session() as sess:
+            self.sess.run(self.init)
+            for epoch in range(nb_epochs):
+                np.random.shuffle(index_list)
+                for batch in range(nb_batches):
+                    batch_indices = index_list[batch * batch_size:
                                            (batch + 1) * batch_size]
-                x_batch = x_train[batch_indices, :]
-                t_batch = t_train[batch_indices, :]
-                self.sess.run(self.train_step,
+                    x_batch = x_train[batch_indices, :]
+                    t_batch = t_train[batch_indices, :]
+                    self.sess.run(self.train_step,
                          feed_dict={self.X: x_batch,
                                     self.t: t_batch})
-            cost = self.sess.run(self.loss, feed_dict={self.X: x_train,
+                cost = self.sess.run(self.loss, feed_dict={self.X: x_train,
                                                   self.t: t_train})
-            sys.stdout.write('cost=%f %d\r' % (cost, epoch))
-            sys.stdout.flush()
-#            self.saver.save(sess, LOG_DIR)
+                sys.stdout.write('cost=%f %d\r' % (cost, epoch))
+                sys.stdout.flush()
+            self.saver.save(sess, "./MLP.ckpt")
 
     def predict(self, x_test):
         with tf.Session() as sess:
-            #sess.run(self.init)
-#            self.saver.restore(sess, LOG_DIR)
+            self.saver.restore(sess, "./MLP.ckpt")
             y_pred = self.sess.run(self.y, feed_dict={self.X: x_test})
         return y_pred
 
