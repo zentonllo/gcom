@@ -1,8 +1,10 @@
-"""
-Created on Wed Apr 26 10:40:14 2017
-
-@author: alumno
-"""
+'''
+A Convolutional Network implementation example using TensorFlow library.
+This example is using the MNIST database of handwritten digits
+(http://yann.lecun.com/exdb/mnist/)
+Author: Aymeric Damien
+Project: https://github.com/aymericdamien/TensorFlow-Examples/
+'''
 
 from __future__ import print_function, division
 
@@ -10,6 +12,7 @@ import tensorflow as tf
 import numpy as np
 import sys
 from datetime import datetime
+from tensorflow.examples.tutorials.mnist import input_data
 
 NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 ROOT_LOGDIR = 'tf_logs'
@@ -17,31 +20,61 @@ LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
 
 
 class NetConstructor(object):
-    def __init__(self, layers):
+
+    def __init__(self, layer_list):
         tf.reset_default_graph()
         self.file_writer = None
-        self.train_step = None
-        self.layers  = layers
+
         self.layers_dict = { 'fc': self.fc_layer,
-                             'conv': self.conv_layer,
-                             'maxpool': self.maxpool_layer,
-                             'dropout': self.dropout_layer,
-                             'LRN': self.LRN_layer}
-                             
+                     'conv': self.conv_layer,
+                     'maxpool': self.maxpool_layer,
+                     'dropout': self.dropout_layer,
+                     'LRN' : self.LRN_layer}
+
         self.activations_dict = {'relu': tf.nn.relu,
                                  'sigmoid': tf.nn.sigmoid,
                                  'tanh': tf.nn.tanh,
                                  'identity': tf.identity,
 				 'softmax': tf.nn.softmax} #por defecto lo hace en la dimension correcta, creo
+
         self.loss_dict = {'softmax': tf.nn.softmax_cross_entropy_with_logits,
                           'identity': tf.nn.l2_loss,
                           'sigmoid': tf.nn.sigmoid_cross_entropy_with_logits}
-                             
-        
-        self.create_net()
 
-    
-             
+        self.create_net(layer_list)
+
+    def conv_layer(self, inputs, layer_info):
+		
+        params = {}
+        params['inputs']=inputs
+        params['filters'] = layer_info['channels']
+        params['kernel_size'] = layer_info['k_size']
+        params['strides'] = reversed(layer_info['strides'])
+        params['padding'] = layer_info['padding']
+        params['activation'] = self.activations_dict[layer_info['activation']]
+        init_w = layer_info['init_w']
+        if init_w is 'random_normal':
+            params['kernel_initializer'] = tf.random_normal_initializer()
+        init_b = layer_info['init_b']
+        if init_b is 'random_normal':
+            params['bias_initializer'] = tf.random_normal_initializer()
+		#arreglar initializers
+
+        return tf.layers.conv2d(**params)
+
+
+	#Maxpool
+    def maxpool_layer(self, inputs, layer_info):
+
+        params = {}
+        params['inputs'] = inputs
+        params['pool_size'] = layer_info['k_size']
+        params['strides'] = layer_info['strides']
+        params['padding'] = layer_info['padding']
+
+        return tf.layers.max_pooling2d(**params)
+
+
     def fc_layer(self, inputs, layer_info):
 
 
@@ -57,86 +90,68 @@ class NetConstructor(object):
         params['units'] = layer_info['dim']#es un entero, segun las especificaciones
         params['activation'] = self.activations_dict[layer_info['activation']]
         init_w = layer_info['init_w']
-        if init_w is 'truncated_normal':
-            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
-        else:
-            params['kernel_initializer'] = tf.zeros_initializer()
+        if init_w is 'random_normal':
+            params['kernel_initializer'] = tf.random_normal_initializer()
         init_b = layer_info['init_b']
-        if init_b is 'truncated_normal':
-            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
-        #sin else, ya es zeros por defecto
+        if init_b is 'random_normal':
+            params['bias_initializer'] = tf.random_normal_initializer()
+		#arreglar initializers
 
         return tf.layers.dense(**params)
 
-    #Dropout
+	#Dropout
     def dropout_layer(self, unit, layer_info):
-        return tf.layers.dropout(unit, layer_info['prob']) #prob es la probabilidad de quitarlos, tal vez queramos usar 1-prob 
-        
-    
-    def conv_layer(self, inputs, layer_info):
-        
-        params = {}
-        params['inputs']=inputs
-        params['filters'] = layer_info['channels']
-        params['kernel_size'] = layer_info['k_size']
-        params['strides'] = reversed(layer_info['strides'])
-        params['padding'] = layer_info['padding']
-        params['activation'] = self.activations_dict[layer_info['activation']]
-        init_w = layer_info['init_w']
-        if init_w is 'truncated_normal':
-            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
-        else:
-            params['kernel_initializer'] = tf.zeros_initializer()
-        init_b = layer_info['init_b']
-        if init_b is 'truncated_normal':
-            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
-        #sin else, ya es zeros por defecto
+        keep_prob = layer_info['prob']
+        prob = tf.placeholder(tf.float32)
+        self.dropouts_dic[prob] = keep_prob
+        self.dropout_ones_dic[prob] = 1.
+	
+        return tf.nn.dropout(unit, prob)
 
-        return tf.layers.conv2d(**params)
-
-    #Maxpool
-    # el stride y el kernel_size deberían ser iguales?  Respuesta: si acepta padding no necesariamente
-    def maxpool_layer(self, inputs, layer_info):
-        return tf.layers.max_pooling2d(inputs, layer_info['k_size'], layer_info['strides'], padding = layer_info['padding'])
-    
-    
     #LRN
     def LRN_layer(self, inputs, layer_info):
-        """
+        
         k = layer_info['k']
         alpha = layer_info['alpha']
         beta = layer_info['beta']
         r = layer_info['r']
-        return tf.nn.local_response_normalization(input=unit, depth_radius=r, bias=k, alpha=alpha, beta=beta, name='LRN_layer')
-        """
-        return inputs
-    
-    def create_net(self):
+        return tf.nn.local_response_normalization(input=inputs, depth_radius=r, bias=k, alpha=alpha, beta=beta, name='LRN_layer')
         
-        #En las especificaciones pone que la dimension inicial debe ser una tupla, aunque luego pone
-		#(784) en vez de (784,) como ejemplo de dimension 1. Nosotros asumiremos que es una tupla
-        dim_input = self.layers[0]['dim']
-        
-        dim_output = (self.layers[-1]['dim'],) #asumimos que la salida tiene dimension 1 (es decir (N,1))
-        
-        self.X = tf.placeholder(tf.float32, shape=(None,)+dim_input, name='X') #x_data
+
+    def create_net(self, layers):
+
+
+        dim_input = layers[0]['dim']
+        dim_output = (layers[-1]['dim'],)
+        reshape = layers[0].get('reshape', False)
+
         self.t = tf.placeholder(tf.float32, shape=(None,)+dim_output, name='t')#t_data
 
-        Z = self.X
-        for layer in self.layers[1:]:
+        if reshape:
+            self.x = tf.placeholder(tf.float32, shape=(None,)+(np.prod(list(dim_input)),)) #x_data
+            Z = tf.reshape(self.x, shape=(-1,)+dim_input, name='X')
+        else:
+            self.x = tf.placeholder(tf.float32, shape=(None,)+dim_input, name='X') #x_data
+            Z = self.x
+
+
+        self.dropouts_dic = {}
+        self.dropout_ones_dic = {}
+
+        for layer in layers[1:]:
             layer_type = layer.pop('type')
             Z  = self.layers_dict[layer_type](Z, layer)
-        self.y = Z
-        
-        with tf.name_scope('loss'):	#Suponemos por ahora que la última capa es fc
-            loss_fn = self.loss_dict[self.layers[-1]['activation']]
-            self.loss = tf.reduce_mean(loss_fn(logits=self.y, labels=self.t), name='loss')
 
-        self.init = tf.global_variables_initializer()
+        self.y = Z #Vease tf_mlop de valdes, a lo mejor quiere que no apliquemos la ultima activacion como el
+
+        with tf.name_scope('loss'):	#Suponemos por ahora que la última capa es fc
+			
+            loss_fn = self.loss_dict[layers[-1]['activation']]
+            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y, labels=self.t), name='loss')
 
         self.saver = tf.train.Saver()
-        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())    
-                
+        self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())
+
     @staticmethod
     def parsea_optimizador(method):
 
@@ -173,23 +188,39 @@ class NetConstructor(object):
 
         return dict_methods[name](**kwargs)
 
-       
-    def train(self, x_train, t_train,
-              nb_epochs=1000,
-              batch_size=10,
-              method=('adam', {'eta':0.001, 'beta1':0.9, 'beta2':0.999, 'epsilon':1e-8}),
-              seed=3):
-        
-        optimizer = self.parsea_optimizador(method)
-        self.train_step = optimizer.minimize(self.loss, name='train_step')
+
+
+    def train(self, x_train, t_train, method=('adam', {'eta':0.001}), nb_epochs=1000, batch_size=10, seed='seed_nb', loss_name = None):
+
+        dic_loss = {'rmsce' : tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y,
+						labels=self.t))}
+
+        display_step = 10
+
+        # Define loss and optimizer
+        if loss_name is None:
+            cost = self.loss
+        else:
+            cost = dic_loss[loss_name]
+        opti = NetConstructor.parsea_optimizador(method)
+        optimizer = opti.minimize(cost)
+
+
+        # Evaluate model
+        correct_pred = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.t, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
 
         nb_data = x_train.shape[0]
         index_list = np.arange(nb_data)
-        nb_batches = nb_data // batch_size #que diferencia hay entre / y //?
+        nb_batches = nb_data // batch_size
 
         self.init = tf.global_variables_initializer() #algunos optimizadores tienen variables globales, como adam
+
+
         with tf.Session() as sess:
             sess.run(self.init)
+            step = 1
             for epoch in range(nb_epochs):
                 np.random.shuffle(index_list)
                 for batch in range(nb_batches):
@@ -197,102 +228,97 @@ class NetConstructor(object):
                                            (batch + 1) * batch_size]
                     x_batch = x_train[batch_indices, :]
                     t_batch = t_train[batch_indices, :]
-                    sess.run(self.train_step,
-                         feed_dict={self.X: x_batch,
-                                    self.t: t_batch})
-                cost = sess.run(self.loss, feed_dict={self.X: x_train,
-                                                  self.t: t_train})
-                sys.stdout.write('cost=%f %d\r' % (cost, epoch))
-                sys.stdout.flush()
+                    feed_dict = {self.x: x_batch, self.t: t_batch}
+                    feed_dict.update(self.dropouts_dic)
+                    sess.run(optimizer, feed_dict=feed_dict)
+                    
+                    if step % display_step == 0:
+                    # Calculate batch loss and accuracy
+                    	feed_dict = {self.x: x_batch, self.t: t_batch}
+                    	feed_dict.update(self.dropout_ones_dic)
+                    	loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
+                    	print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + \
+                  			"{:.6f}".format(loss) + ", Training Accuracy= " + \
+                 	 		"{:.5f}".format(acc))
+                    step += 1
             self.saver.save(sess, "./MLP.ckpt")
 
     def predict(self, x_test):
         with tf.Session() as sess:
             self.saver.restore(sess, "./MLP.ckpt")
-            y_pred = sess.run(self.y, feed_dict={self.X: x_test})
+            y_pred = sess.run(self.y, feed_dict={self.x: x_test})
         return y_pred
 
 
-"""
+if __name__ == '__main__':
 
 
+    layer_list = []
 
-No esta claro en strides y ksize que componente es la vertical y cual es la horizontal.
-Como normalmente son cuadradas no importa demasiado, pero puede que lo tengamos al reves
-
-
-
+    layer =  {'dim': (28, 28, 1), 'reshape':True}
+    layer_list.append(layer)
 
 
+    layer = {'type': 'conv',
+     'channels': 32,
+     'k_size': (5, 5),
+     'strides': (1, 1),
+     'padding': 'SAME',
+     'activation': 'relu',
+     'init_w': 'random_normal',
+     'init_b': 'random_normal'}
+    layer_list.append(layer)
 
 
+    layer = {'type': 'maxpool',
+     'k_size': (2, 2),
+     'strides': (2, 2),
+     'padding': 'SAME'}
+    layer_list.append(layer)
 
 
+    layer = {'type': 'conv',
+     'channels': 64,
+     'k_size': (5, 5),
+     'strides': (1, 1),
+     'padding': 'SAME',
+     'activation': 'relu',
+     'init_w': 'random_normal',
+     'init_b': 'random_normal'}
+    layer_list.append(layer)
+
+    layer = {'type': 'maxpool',
+     'k_size': (2, 2),
+     'strides': (2, 2),
+     'padding': 'SAME'}
+    layer_list.append(layer)
 
 
-
-layer_list es una lista de diccionarios que describirán las sucesivas capas de la red.
-
-layer_list = [layer_0, layer_2, layer_3, ..., layer_m]
-
-layer_0 contendrá solamente la dimensión de los datos de entrada, que será una tupla o un número:
-
-layer_0 = {'dim': (dim_0, dim_1, ..., dim_L)}
-
-Por ejemplo,
-
-layer_0 = {'dim': (224, 224, 3)}
-
-en el caso de que los datos de entrada sean imágenes de dimensión 224 x 224 y 3 canales de color o
-
-layer_0 = {'dim': 784} en el caso de que sean vectores que representen imágenes de MNIST.
-
-En las restantes capas, la estructura será la siguiente:
-
-(se indican los parámetros mínimos que deberán estar implementados, se
- pueden añadir otros si se desea. No todos los parámetros deben
- aparecer siempre, por ejemplo, una capa de dropout sólo necesita la
- probabilidad de hacer dropout)
-
-layer_k = {'type': layer_type, # tipo de capa: 'fc', 'conv', 'maxpool', 'dropout', 'LRN', ...
-           'dim': (dim_0, ..., dim_L) # dimensiones de la salida
-                                      # de la capa (en su caso)
-           'kernel_size': size # por ejemplo, (3, 3) en una máscara convolucional 3 x 3  // kerner_size - conv    ksize - maxpool
-           'stride': stride # por ejemplo, (1, 1) si se hace stride 1 horizontal y 1 vertical
-           'init': init_method # método de inicialización de pesos y biases, por ejemplo
-                               # ('truncated_normal', stddev, 'zeros'), 'xavier' o 'he'
-           'padding': padding # 'SAME', 'VALID'
-           'activation': activation, # función de activación, 
-                                     # 'sigmoid', 'tanh', 'relu', 'identity', ...
-           'prob': probability, # float, probabilidad usada en dropout
-           'LRN_params': (k, alpha, beta, r)}
-           
-           
-         AÑADIMOS CAMPO CHANNELS
+    layer = {'type': 'fc',
+     'dim': 1024,
+     'activation': 'relu',
+     'init_w': 'random_normal',
+     'init_b': 'random_normal'}
+    layer_list.append(layer)
 
 
-El método train entrenará la red, recibiendo los datos de entrenamiento,
-número de epochs, tamaño del batch, una semilla opcional para el
-generador de números aleatorios y el método de entrenamiento:
-
-method = (str, params),
-
-el primer elemento describe el método de optimización,
-por ejemplo, 'SGD', 'nesterov', 'momentum', 'adagrad', 'adadelta', 'RMSprop'.
-El segundo elemento es un diccionario de parámetros adaptados al método,
-siguiendo la notación de la práctica anterior. Por ejemplo,
-method = ('SGD', {'eta': 0.1}) describirá un descenso de gradiente estocástico
-con learning rate = 0.1
-
-El método predict recibirá datos de test y devolverá la predicción de la red, una vez entrenada.
+    layer = {'type': 'dropout',
+     'prob': 0.75}
+    layer_list.append(layer)
 
 
-Se acompañará a la práctica dos scripts en Python llamados fc_CIFAR10.py y conv_CIFAR10.py
-que usarán la clase NetConstructor para clasificar la base de datos CIFAR10. El primero sólo podrá
-usar capas completamente conectadas, mientras que el segundo usará
-todas las herramientas disponibles.
+    layer = {'type': 'fc',
+     'dim': 10,
+     'activation': 'identity', #loss no sabemos cual
+     'init_w': 'random_normal',
+     'init_b': 'random_normal'}
+    layer_list.append(layer)
 
-Módulos que se pueden importar: numpy, tensorflow
+    red = NetConstructor(layer_list)
 
-
-"""
+    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
+    x_train = mnist.train.images
+    t_train = mnist.train.labels
+    
+    method = ('adam', {'eta' : 0.001, 'beta_1' : 0.9, 'beta_2' : 0.999, 'epsilon' : 1e-08})
+    red.train(x_train, t_train, method = method, batch_size=128, loss_name='rmsce')
