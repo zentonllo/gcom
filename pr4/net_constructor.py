@@ -1,11 +1,3 @@
-'''
-A Convolutional Network implementation example using TensorFlow library.
-This example is using the MNIST database of handwritten digits
-(http://yann.lecun.com/exdb/mnist/)
-Author: Aymeric Damien
-Project: https://github.com/aymericdamien/TensorFlow-Examples/
-'''
-
 from __future__ import print_function, division
 
 import tensorflow as tf
@@ -138,16 +130,21 @@ class NetConstructor(object):
         self.dropouts_dic = {}
         self.dropout_ones_dic = {}
 
+        act = layers[-1]['activation']
+        layers[-1]['activation'] = 'identity'
+
         for layer in layers[1:]:
             layer_type = layer.pop('type')
             Z  = self.layers_dict[layer_type](Z, layer)
+        self.logits = Z
+        self.y = self.activations_dict[act](self.logits)
 
         self.y = Z #Vease tf_mlop de valdes, a lo mejor quiere que no apliquemos la ultima activacion como el
 
         with tf.name_scope('loss'):	#Suponemos por ahora que la última capa es fc
 			
-            loss_fn = self.loss_dict[layers[-1]['activation']]
-            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y, labels=self.t), name='loss')
+            loss_fn = self.loss_dict[act]
+            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits, labels=self.t), name='loss')
 
         self.saver = tf.train.Saver()
         self.file_writer = tf.summary.FileWriter(LOG_DIR, tf.get_default_graph())
@@ -192,7 +189,7 @@ class NetConstructor(object):
 
     def train(self, x_train, t_train, method=('adam', {'eta':0.001}), nb_epochs=1000, batch_size=10, seed='seed_nb', loss_name = None):
 
-        dic_loss = {'rmsce' : tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.y,
+        dic_loss = {'rmsce' : tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.logits,
 						labels=self.t))}
 
         display_step = 10
@@ -232,15 +229,12 @@ class NetConstructor(object):
                     feed_dict.update(self.dropouts_dic)
                     sess.run(optimizer, feed_dict=feed_dict)
                     
-                    if step % display_step == 0:
-                    # Calculate batch loss and accuracy
-                    	feed_dict = {self.x: x_batch, self.t: t_batch}
-                    	feed_dict.update(self.dropout_ones_dic)
-                    	loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
-                    	print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + \
-                  			"{:.6f}".format(loss) + ", Training Accuracy= " + \
-                 	 		"{:.5f}".format(acc))
-                    step += 1
+                feed_dict = {self.x: x_train, self.t: t_train}
+                feed_dict.update(self.dropout_ones_dic)
+                loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
+                print("Epoch " + str(epoch) + ", Minibatch Loss= " + \
+          			"{:.6f}".format(loss) + ", Training Accuracy= " + \
+         	 		"{:.5f}".format(acc))
             self.saver.save(sess, "./MLP.ckpt")
 
     def predict(self, x_test):
