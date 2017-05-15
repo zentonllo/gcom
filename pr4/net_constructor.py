@@ -37,8 +37,6 @@ class NetConstructor(object):
         network
     loss_dict :
         Dictionary containing the available loss functions for our network
-    init_dict :
-        Dictionary containing the available initializers for our network
     """
 
     def __init__(self, layer_list):
@@ -70,13 +68,8 @@ class NetConstructor(object):
         # By default, applies these functions with the right dimensions
 
         self.loss_dict = {'softmax': tf.nn.softmax_cross_entropy_with_logits,
-                          'identity': tf.nn.l2_loss,
+                          #'identity': tf.nn.l2_loss,
                           'sigmoid': tf.nn.sigmoid_cross_entropy_with_logits}
-
-        # Several initializer modes
-        self.init_dict = {'truncated_normal': tf.truncated_normal_initializer,
-                          'random_normal': tf.random_normal_initializer,
-                          'zeros': tf.zeros_initializer}
 
         self.create_net(layer_list)
 
@@ -89,11 +82,6 @@ class NetConstructor(object):
             Placeholder for the tensor representing input data samples
         layer_info :
             Parameters used to build the Convolutional Layer
-
-        Notes
-        -----
-        If there is no init_b (initialize bias) parameter in the layer_info,
-        no bias will be applied.
 
         Returns
         -------
@@ -109,12 +97,15 @@ class NetConstructor(object):
         params['strides'] = reversed(layer_info['strides'])
         params['padding'] = layer_info['padding']
         params['activation'] = self.activations_dict[layer_info['activation']]
-        params['kernel_initializer'] = self.init_dict[layer_info['init_w']]
-
-        # If there is no init_b, TensorFlow uses zeros
-        if 'init_b' in layer_info:
-            params['bias_initializer'] = self.init_dict[layer_info['init_b']]
-
+        init_w = layer_info['init_w']
+        if init_w is 'truncated_normal':
+            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
+        else:
+            params['kernel_initializer'] = tf.zeros_initializer()
+        init_b = layer_info['init_b']
+        if init_b is 'truncated_normal':
+            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
+        #sin else, ya es zeros por defecto
         return tf.layers.conv2d(**params)
 
     def maxpool_layer(self, inputs, layer_info):
@@ -152,11 +143,6 @@ class NetConstructor(object):
         layer_info :
             Parameters used to build the Fully-Connected Layer
 
-        Notes
-        -----
-        If there is no init_b (initialize bias) parameter in the layer info,
-        no bias will be applied.
-
         Returns
         -------
         layer
@@ -174,10 +160,15 @@ class NetConstructor(object):
         params['inputs'] = inputs_flat
         params['units'] = layer_info['dim']  # Int value
         params['activation'] = self.activations_dict[layer_info['activation']]
-        params['kernel_initializer'] = self.init_dict[layer_info['init_w']]
-        params['kernel_initializer'] = self.init_dict[layer_info['init_w']]
-        if 'init_b' in layer_info:
-            params['bias_initializer'] = self.init_dict[layer_info['init_b']]
+        init_w = layer_info['init_w']
+        if init_w is 'truncated_normal':
+            params['kernel_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_w'])
+        else:
+            params['kernel_initializer'] = tf.zeros_initializer()
+        init_b = layer_info['init_b']
+        if init_b is 'truncated_normal':
+            params['bias_initializer'] = tf.truncated_normal_initializer(stddev = layer_info['stddev_b'])
+        #sin else, ya es zeros por defecto
 
         return tf.layers.dense(**params)
 
@@ -288,16 +279,11 @@ class NetConstructor(object):
         self.logits = Z
         self.y = self.activations_dict[act](self.logits)
 
-        self.y = Z
-        # Vease tf_mlop de valdes, a lo mejor quiere
-        # que no apliquemos la ultima activacion como el
-
         # We assume that the last layer is FC
         with tf.name_scope('loss'):
 
             loss_fn = self.loss_dict[act]
-            self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                logits=self.logits, labels=self.t), name='loss')
+            self.loss = tf.reduce_mean(loss_fn(logits=self.logits, labels=self.t), name='loss')
 
         self.saver = tf.train.Saver()
         self.file_writer = tf.summary.FileWriter(LOG_DIR,
@@ -358,7 +344,7 @@ class NetConstructor(object):
         return dict_methods[name](**kwargs)
 
     def train(self, x_train, t_train, method=('adam', {'eta': 0.001}),
-              nb_epochs=1000, batch_size=10, seed='seed_nb', loss_name=None):
+              nb_epochs=1000, batch_size=10, seed='seed_nb', print_cost = True):
         """Trains the Neural Network created by the NetConstructor class.
 
         Parameters
@@ -375,37 +361,21 @@ class NetConstructor(object):
             Number of data samples to be considered in an epoch
         seed :
             Seed used in order to initialize weights
-        loss_name : String
-            Loss function to be used in the training
 
         Returns
         -------
         None
 
         """
-        dic_loss = {'rmsce':
-                    tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
-                                   logits=self.logits, labels=self.t))}
-
-        display_step = 10
-
         # Define loss and optimizer
-        if loss_name is None:
-            cost = self.loss
-        else:
-            cost = dic_loss[loss_name]
         opti = NetConstructor.parse_optimizer(method)
-        optimizer = opti.minimize(cost)
-
-        # Evaluate model
-        correct_pred = tf.equal(tf.argmax(self.y, 1), tf.argmax(self.t, 1))
-        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        optimizer = opti.minimize(self.loss)
 
         nb_data = x_train.shape[0]
         index_list = np.arange(nb_data)
         nb_batches = nb_data // batch_size
 
-        # Some optimizers have global variables (like adam)
+        # Some optimizers have global variables
         self.init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -422,12 +392,12 @@ class NetConstructor(object):
                     feed_dict.update(self.dropouts_dic)
                     sess.run(optimizer, feed_dict=feed_dict)
 
-                feed_dict = {self.x: x_train, self.t: t_train}
-                feed_dict.update(self.dropout_ones_dic)
-                loss, acc = sess.run([cost, accuracy], feed_dict=feed_dict)
-                print("Epoch " + str(epoch) + ", Minibatch Loss= " +
-                      "{:.6f}".format(loss) + ", Training Accuracy= " +
-                      "{:.5f}".format(acc))
+                if print_cost:
+                    feed_dict = {self.x: x_train, self.t: t_train}
+                    feed_dict.update(self.dropout_ones_dic)
+                    loss = sess.run(self.loss, feed_dict=feed_dict)
+                    print("Epoch " + str(epoch) + ", Loss= " +
+                          "{:.6f}".format(loss))
             self.saver.save(sess, "./MLP.ckpt")
 
     def predict(self, x_test):
@@ -447,75 +417,7 @@ class NetConstructor(object):
         """
         with tf.Session() as sess:
             self.saver.restore(sess, "./MLP.ckpt")
-            y_pred = sess.run(self.y, feed_dict={self.x: x_test})
+            feed_dict = {self.x : x_test}
+            feed_dict.update(self.dropout_ones_dic)
+            y_pred = sess.run(self.y, feed_dict=feed_dict)
         return y_pred
-
-
-if __name__ == '__main__':
-
-    layer_list = []
-
-    layer = {'dim': (28, 28, 1), 'reshape': True}
-    layer_list.append(layer)
-
-    layer = {'type': 'conv',
-             'channels': 32,
-             'k_size': (5, 5),
-             'strides': (3, 3),
-             'padding': 'SAME',
-             'activation': 'relu',
-             'init_w': 'random_normal',
-             'init_b': 'random_normal'}
-    layer_list.append(layer)
-
-    layer = {'type': 'maxpool',
-             'k_size': (2, 2),
-             'strides': (2, 2),
-             'padding': 'SAME'}
-    layer_list.append(layer)
-
-    layer = {'type': 'conv',
-             'channels': 64,
-             'k_size': (5, 5),
-             'strides': (3, 3),
-             'padding': 'SAME',
-             'activation': 'relu',
-             'init_w': 'random_normal',
-             'init_b': 'random_normal'}
-    layer_list.append(layer)
-
-    layer = {'type': 'maxpool',
-             'k_size': (2, 2),
-             'strides': (2, 2),
-             'padding': 'SAME'}
-    layer_list.append(layer)
-
-    layer = {'type': 'fc',
-             'dim': 1024,
-             'activation': 'relu',
-             'init_w': 'random_normal',
-             'init_b': 'random_normal'}
-    layer_list.append(layer)
-
-    layer = {'type': 'dropout',
-             'prob': 0.75}
-    layer_list.append(layer)
-
-    # Loss no sabemos cual es
-    layer = {'type': 'fc',
-             'dim': 10,
-             'activation': 'identity',
-             'init_w': 'random_normal',
-             'init_b': 'random_normal'}
-    layer_list.append(layer)
-
-    net = NetConstructor(layer_list)
-
-    mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
-    x_train = mnist.train.images
-    t_train = mnist.train.labels
-
-    method = ('adam', {'eta': 0.001, 'beta_1': 0.9,
-                       'beta_2': 0.999, 'epsilon': 1e-08})
-    net.train(x_train, t_train, method=method,
-              batch_size=128, loss_name='rmsce')
