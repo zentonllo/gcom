@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Module modeling a Neural Network, containing methods to create several types
+of layers using the TensorFlow API.
+
+"""
 from __future__ import print_function, division
 
 import tensorflow as tf
@@ -10,10 +16,42 @@ NOW = datetime.utcnow().strftime("%Y%m%d%H%M%S")
 ROOT_LOGDIR = 'tf_logs'
 LOG_DIR = "{}/run-{}".format(ROOT_LOGDIR, NOW)
 
+__author__ = "Ignacio Casso, Daniel Gamo, Gwydion J. Martín, Alberto Terceño"
 
 class NetConstructor(object):
+    """Class that models a Neural Network
+    
+    Attributes
+    ----------
+    file_writer : 
+        FileWriter class used for saving an event file
+    train_step : 
+        Operation that updates the loss for the current graph
+    layers : 
+        List of layers used in order to create the network
+    layers_dict :
+        Dictionary containing the available layers for our network
+    activation_dict :
+        Dictionary containing the available activation functions for our
+        network
+    loss_dict :
+        Dictionary containing the available loss functions for our network
+  
+    """
 
     def __init__(self, layer_list):
+	"""__init__ mtehod for the NetConstructor class
+        
+        Sets up parameters for the NetConstructor class and calls the
+        create_net method in order to initialize the network's structure
+        
+        Parameters
+        ---------.
+        layers :
+           List containing the layers used to create the Neural Network
+        
+        """
+	
         tf.reset_default_graph()
         self.file_writer = None
 
@@ -36,7 +74,10 @@ class NetConstructor(object):
         self.create_net(layer_list)
 
     def conv_layer(self, inputs, layer_info):
-		
+	"""Method that creates a TensorFlow's Convolutional Layer
+
+        """
+	
         params = {}
         params['inputs']=inputs
         params['filters'] = layer_info['channels']
@@ -57,7 +98,10 @@ class NetConstructor(object):
 
 	#Maxpool
     def maxpool_layer(self, inputs, layer_info):
+	"""Method that creates a TensorFlow's Pooling Layer
 
+        """
+	
         params = {}
         params['inputs'] = inputs
         params['pool_size'] = layer_info['k_size']
@@ -68,8 +112,10 @@ class NetConstructor(object):
 
 
     def fc_layer(self, inputs, layer_info):
+	"""Method that creates a TensorFlow's Fully-Connected Layer
 
-
+        """
+	
         inputs_dim = inputs.get_shape().as_list()
         if len(inputs_dim) is 2:
             inputs_flat = inputs
@@ -93,7 +139,11 @@ class NetConstructor(object):
 
 	#Dropout
     def dropout_layer(self, unit, layer_info):
-        keep_prob = layer_info['prob']
+        """Method that creates a TensorFlow's Dropout Layer
+
+        """
+	
+	keep_prob = layer_info['prob']
         prob = tf.placeholder(tf.float32)
         self.dropouts_dic[prob] = keep_prob
         self.dropout_ones_dic[prob] = 1.
@@ -102,7 +152,10 @@ class NetConstructor(object):
 
     #LRN
     def LRN_layer(self, inputs, layer_info):
-        
+        """Method that creates a TensorFlow's Local Response Normalization Layer
+
+        """
+	
         k = layer_info['k']
         alpha = layer_info['alpha']
         beta = layer_info['beta']
@@ -111,7 +164,9 @@ class NetConstructor(object):
         
 
     def create_net(self, layers):
-
+	"""Method that creates the neural network given a list of layers
+        
+        """
 
         dim_input = layers[0]['dim']
         dim_output = (layers[-1]['dim'],)
