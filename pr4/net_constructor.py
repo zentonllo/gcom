@@ -207,11 +207,6 @@ class NetConstructor(object):
         layer_info :
             Parameters used to build the Local Response Normalization Layer
 
-        Notes
-        -----
-        If there is no init_b (initialize bias) parameter in the layer info,
-        no bias will be applied.
-
         Returns
         -------
         layer
@@ -344,7 +339,7 @@ class NetConstructor(object):
         return dict_methods[name](**kwargs)
 
     def train(self, x_train, t_train, method=('adam', {'eta': 0.001}),
-              nb_epochs=1000, batch_size=10, seed='seed_nb', print_cost = True):
+              nb_epochs=1000, batch_size=10, seed=0, print_cost = True):
         """Trains the Neural Network created by the NetConstructor class.
 
         Parameters
@@ -367,6 +362,8 @@ class NetConstructor(object):
         None
 
         """
+        tf.set_random_seed(seed)
+
         # Define loss and optimizer
         opti = NetConstructor.parse_optimizer(method)
         optimizer = opti.minimize(self.loss)
