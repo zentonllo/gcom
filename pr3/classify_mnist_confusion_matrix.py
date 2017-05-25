@@ -1,9 +1,13 @@
 from __future__ import division, print_function
 
+import time
+
 import cPickle
 import gzip
 import sys
 import numpy as np
+import mlp
+reload(mlp)
 from mlp import MLP
 import matplotlib.pyplot as plt
 import itertools
@@ -75,18 +79,21 @@ mlp = MLP(K_list,
 
 if 1:
     x_test, t_test = test_set
-    nb_epochs = 1
+    nb_epochs = 250
 
     for epoch in range(nb_epochs):
         initialize_weights = (epoch == 0)
+        now = time.time()
         mlp.train(x_data, one_hot_tdata,
-                  epochs=250,
+                  epochs=1,
                   batch_size=60,
                   initialize_weights=initialize_weights,
                   eta=0.01,
                   beta=0,
                   method='adam',
                   print_cost=True)
+        time_passed = time.time() - now
+        print(time_passed)
 
         mlp.get_activations_and_units((x_test - mean_image) / 255)
         nb_correct = np.sum(np.equal(t_test, np.argmax(mlp.y, axis=1)))
@@ -98,12 +105,21 @@ if 1:
                          % ((nb_correct / 10000) * 100))
         sys.stdout.flush()
 
-if 0:
-    np.load('./mnist_weights.npy')
-    np.load('./mnist_biases.npy')
+    np.save('mnist_weights_v2', mlp.weights_list, allow_pickle=True)
+    np.save('mnist_biases_v2', mlp.biases_list, allow_pickle=True)
 
-np.save('mnist_weights_v2', mlp.weights_list, allow_pickle=True)
-np.save('mnist_biases_v2', mlp.biases_list, allow_pickle=True)
+    print(nb_correct)
+    
+if 0:
+    np.load('./mnist_weights_v2.npy')
+    np.load('./mnist_biases_v2.npy')
+
+    x_test, t_test = test_set
+    #mean_image = np.mean(x_test, axis=0)
+    mlp.get_activations_and_units((x_test - mean_image) / 255)
+    nb_correct = np.sum(np.equal(t_test, np.argmax(mlp.y, axis=1)))
+    print(nb_correct)
+
 
 
 class_names = np.array(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'])
