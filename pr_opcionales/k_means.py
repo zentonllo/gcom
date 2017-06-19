@@ -114,7 +114,7 @@ if __name__ == '__main__':
 	data3 = np.random.multivariate_normal(m3, cov3, 100)
 	X = np.vstack((data1,np.vstack((data2,data3))))
 	np.random.shuffle(X)
-	a = AnimatedKMeans(X = X, k = 4)
+	a = AnimatedKMeans(X = X, k = 3)
 	a.show()
 
 
